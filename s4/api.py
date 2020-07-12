@@ -20,7 +20,11 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from s4.api import api
+import responder
 
-if __name__ == '__main__':
-    api.run(address='0.0.0.0', port=8080)
+api = responder.API()
+
+
+@api.route("/")
+async def hello_world(req, resp) -> None:
+    resp.media = {"message": "Hello World!"}
