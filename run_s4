@@ -20,7 +20,29 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from s4.api import api
+import asyncio
+
+from s4 import API
+
+api = API()
+
+
+async def printf():
+    while True:
+        print("This is parallel process")
+        await asyncio.sleep(2)
+
+
+@api.route("/")
+def hello_world(req, resp):
+    resp.text = "Hello World!"
+
 
 if __name__ == '__main__':
-    api.run(address='0.0.0.0', port=8080)
+    loop = asyncio.get_event_loop()
+    gather = asyncio.gather(
+        api.run(),
+        printf()
+    )
+    loop.run_until_complete(gather)
+

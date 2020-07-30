@@ -20,11 +20,52 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import responder
+import logging
+import sys
+import os
 
-api = responder.API()
+from responder import API as ResponderAPI
+from uvicorn import Config, Server
 
 
-@api.route("/")
-async def hello_world(req, resp) -> None:
-    resp.media = {"message": "Hello World!"}
+async def api_spawn(app, **kwargs) -> None:
+    config = Config(app, **kwargs)
+    server = Server(config=config)
+
+    if (config.reload or config.workers > 1) and not isinstance(app, str):
+        logger = logging.getLogger("uvicorn.error")
+        logger.warn(
+            "You must pass the application as an import string to enable 'reload' or 'workers'."
+        )
+        sys.exit(1)
+
+    if config.should_reload or config.workers > 1:
+        logger = logging.getLogger("s4.error")
+        logger.warn(
+            "S4 not supposed to use 'workers' and 'reload'."
+        )
+        sys.exit(1)
+    else:
+        config.setup_event_loop()
+        await server.serve()
+
+
+class API(ResponderAPI):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    async def serve(self, *, address=None, port=None, debug=False, **options):
+        if "PORT" in os.environ:
+            port = int(os.environ["PORT"])
+
+        if address is None:
+            address = "0.0.0.0"
+        if port is None:
+            port = 8000
+
+        await api_spawn(self, host=address, port=port, debug=debug, **options)
+
+    async def run(self, **kwargs):
+        if "debug" not in kwargs:
+            kwargs.update({"debug": self.debug})
+        await self.serve(**kwargs)
