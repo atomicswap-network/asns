@@ -22,9 +22,7 @@
 
 import asyncio
 
-from s4 import API
-
-api = API()
+from s4 import s4_api
 
 
 async def printf():
@@ -33,15 +31,10 @@ async def printf():
         await asyncio.sleep(2)
 
 
-@api.route("/")
-def hello_world(req, resp):
-    resp.text = "Hello World!"
-
-
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     gather = asyncio.gather(
-        api.run(),
+        s4_api.run(),
         printf()
     )
     loop.run_until_complete(gather)

@@ -25,6 +25,7 @@ import sys
 import os
 
 from responder import API as ResponderAPI
+from responder.models import Request, Response
 from uvicorn import Config, Server
 
 
@@ -69,3 +70,14 @@ class API(ResponderAPI):
         if "debug" not in kwargs:
             kwargs.update({"debug": self.debug})
         await self.serve(**kwargs)
+
+
+api = s4_api = API()
+
+
+@api.route("/")
+def server_info(_: Request, resp: Response):
+    resp.media = {
+        "message": "This server is working."
+    }
+
