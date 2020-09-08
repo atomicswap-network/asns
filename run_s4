@@ -22,7 +22,7 @@
 
 import asyncio
 
-from s4 import s4_api
+from s4 import s4_api, get_path
 
 
 async def printf():
@@ -32,6 +32,8 @@ async def printf():
 
 
 if __name__ == '__main__':
+    get_path()
+
     loop = asyncio.get_event_loop()
     gather = asyncio.gather(
         s4_api.run(),

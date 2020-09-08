@@ -21,3 +21,4 @@
 # SOFTWARE.
 
 from .api import API, s4_api
+from .util import get_path
