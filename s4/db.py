@@ -124,7 +124,7 @@ class TokenDBData:
 class DBBase:
     def __init__(self, db_name: str) -> None:
         os.makedirs(root_path, exist_ok=True)
-        self.db = plyvel.DB(os.path.join(root_path, db_name), bool_create_if_missing=True)
+        self.db = plyvel.DB(os.path.join(root_path, db_name), create_if_missing=True)
 
     def put(self, key: str, value: Union[TxDBData, TokenDBData]) -> None:
         raise NotImplementedError
