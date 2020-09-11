@@ -23,10 +23,18 @@
 import logging
 import sys
 import os
+import secrets
+import time
 
 from responder import API as ResponderAPI
 from responder.models import Request, Response
 from uvicorn import Config, Server
+from pycoin.encoding import b58
+
+from .db import TokenDB, TokenDBData
+
+
+token_db = TokenDB()
 
 
 async def api_spawn(app, **kwargs) -> None:
@@ -81,3 +89,23 @@ def server_info(_: Request, resp: Response):
         "message": "This server is working."
     }
 
+
+@api.route("/get_token")
+def get_token(_: Request, resp: Response):
+    token = b58.b2a_base58(secrets.token_bytes(64))
+    created_at = int(time.time())
+    result = {
+        "code": "Success",
+        "token": token
+    }
+
+    try:
+        token_db.put(token, TokenDBData(created_at))
+    except Exception as e:
+        result = {
+            "code": "Failed",
+            "token": None,
+            "error": str(e)
+        }
+
+    resp.media = result
