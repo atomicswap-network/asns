@@ -20,9 +20,15 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
+
 from dataclasses import dataclass, asdict
 from enum import IntEnum
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
+
+import plyvel
+import pickle
+from .util import root_path
 
 
 class SwapStatus(IntEnum):
@@ -114,3 +120,43 @@ class TokenDBData:
     def asdict(self) -> Dict:
         return asdict(self)
 
+
+class DBBase:
+    def __init__(self, db_name: str) -> None:
+        self.db = plyvel.DB(os.path.join(root_path, db_name), bool_create_if_missing=True)
+
+    def put(self, key: str, value: Union[TxDBData, TokenDBData]) -> None:
+        raise NotImplementedError
+
+    def get(self, key: str) -> Union[TxDBData, TokenDBData]:
+        raise NotImplementedError
+
+
+class TxDB(DBBase):
+    def __init__(self) -> None:
+        super().__init__("tx_db")
+
+    def put(self, key: str, value: TxDBData) -> None:
+        assert isinstance(value, TxDBData), f"Data type is inappropriate!({type(value).__name__})"
+        serialized_value = pickle.dumps(value.asdict())
+        self.db.put(key, serialized_value)
+
+    def get(self, key: str) -> TxDBData:
+        value = self.db.get(key)
+        deserialized_value = pickle.loads(value)
+        return TxDBData.from_dict(deserialized_value)
+
+
+class TokenDB(DBBase):
+    def __init__(self) -> None:
+        super().__init__("token_db")
+
+    def put(self, key: str, value: TokenDBData) -> None:
+        assert isinstance(value, TokenDBData), f"Data type is inappropriate!({type(value).__name__})"
+        serialized_value = pickle.dumps(value.asdict())
+        self.db.put(key, serialized_value)
+
+    def get(self, key: str) -> TokenDBData:
+        value = self.db.get(key)
+        deserialized_value = pickle.loads(value)
+        return TokenDBData.from_dict(deserialized_value)
