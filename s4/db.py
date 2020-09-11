@@ -140,10 +140,10 @@ class TxDB(DBBase):
     def put(self, key: str, value: TxDBData) -> None:
         assert isinstance(value, TxDBData), f"Data type is inappropriate!({type(value).__name__})"
         serialized_value = pickle.dumps(value.asdict())
-        self.db.put(key, serialized_value)
+        self.db.put(key.encode('utf-8'), serialized_value)
 
     def get(self, key: str) -> TxDBData:
-        value = self.db.get(key)
+        value = self.db.get(key.encode('utf-8'))
         deserialized_value = pickle.loads(value)
         return TxDBData.from_dict(deserialized_value)
 
@@ -155,9 +155,9 @@ class TokenDB(DBBase):
     def put(self, key: str, value: TokenDBData) -> None:
         assert isinstance(value, TokenDBData), f"Data type is inappropriate!({type(value).__name__})"
         serialized_value = pickle.dumps(value.asdict())
-        self.db.put(key, serialized_value)
+        self.db.put(key.encode('utf-8'), serialized_value)
 
     def get(self, key: str) -> TokenDBData:
-        value = self.db.get(key)
+        value = self.db.get(key.encode('utf-8'))
         deserialized_value = pickle.loads(value)
         return TokenDBData.from_dict(deserialized_value)
