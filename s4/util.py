@@ -1,3 +1,4 @@
+# Copyright (c) 2011-2020 The Electrum Developers
 # Copyright (c) 2020 The Swapping Support System Developers
 #
 # Permission is hereby granted, free of charge, to any person
@@ -22,6 +23,9 @@
 
 import platform
 import os
+import hashlib
+
+from typing import Union
 
 
 def get_path() -> str:
@@ -38,3 +42,28 @@ def get_path() -> str:
 
 
 root_path = os.path.join(get_path(), "swap-san-server")
+
+
+def to_bytes(something, encoding="utf8") -> bytes:
+    """
+    cast string to bytes() like object, but for python2 support it's bytearray copy
+    """
+    if isinstance(something, bytes):
+        return something
+    if isinstance(something, str):
+        return something.encode(encoding)
+    elif isinstance(something, bytearray):
+        return bytes(something)
+    else:
+        raise TypeError("Not a string or bytes like object")
+
+
+def sha256(x: Union[bytes, str]) -> bytes:
+    x = to_bytes(x, "utf8")
+    return bytes(hashlib.sha256(x).digest())
+
+
+def sha256d(x: Union[bytes, str]) -> bytes:
+    x = to_bytes(x, "utf8")
+    return bytes(sha256(sha256(x)))
+

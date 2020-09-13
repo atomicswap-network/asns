@@ -32,6 +32,7 @@ from uvicorn import Config, Server
 from pycoin.encoding import b58
 
 from .db import TokenDB, TokenDBData
+from .util import sha256d
 
 
 token_db = TokenDB()
@@ -92,7 +93,9 @@ def server_info(_: Request, resp: Response):
 
 @api.route("/get_token")
 def get_token(_: Request, resp: Response):
-    token = b58.b2a_base58(secrets.token_bytes(64))
+    raw_token = secrets.token_bytes(64)
+    token = b58.b2a_base58(raw_token)
+    hashed_token = sha256d(raw_token)
     created_at = int(time.time())
     result = {
         "code": "Success",
@@ -100,7 +103,7 @@ def get_token(_: Request, resp: Response):
     }
 
     try:
-        token_db.put(token, TokenDBData(created_at))
+        token_db.put(hashed_token, TokenDBData(created_at))
     except Exception as e:
         result = {
             "code": "Failed",
