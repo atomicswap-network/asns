@@ -108,7 +108,7 @@ class TokenDBData:
         shaped_dict_data = {}
 
         data_list: List[Tuple[str, type]] = [
-            ("data", int)
+            ("date", int)
         ]
 
         for data in data_list:
