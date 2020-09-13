@@ -112,3 +112,25 @@ def get_token(_: Request, resp: Response):
         }
 
     resp.media = result
+
+
+@api.route("/verify_token/{token}")
+def verify_token(_: Request, resp: Response, token: str):
+    raw_token = b58.a2b_base58(token)
+    hashed_token = sha256d(raw_token)
+    try:
+        token_info = token_db.get(hashed_token)
+        result = {
+            "code": "Success",
+            "exist": True,
+            "created_at": token_info.date
+        }
+    except Exception:
+        result = {
+            "code": "Success",
+            "exist": False,
+            "created_at": None
+        }
+
+    resp.media = result
+
