@@ -1,5 +1,4 @@
 responder
 uvicorn
 plyvel-win32
-pickle
 pycoin
