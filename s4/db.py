@@ -28,7 +28,9 @@ from typing import Dict, List, Tuple, Union
 
 import plyvel
 import pickle
-from .util import root_path
+
+from pycoin.encoding import b58
+from .util import root_path, sha256d
 
 
 class SwapStatus(IntEnum):
@@ -161,3 +163,11 @@ class TokenDB(DBBase):
         value = self.db.get(key)
         deserialized_value = pickle.loads(value)
         return TokenDBData.from_dict(deserialized_value)
+
+    def verify_token(self, token: str) -> bool:
+        raw_token = b58.a2b_base58(token)
+        hashed_token = sha256d(raw_token)
+        if self.get(hashed_token):
+            return True
+        else:
+            return False
