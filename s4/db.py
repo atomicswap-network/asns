@@ -51,7 +51,7 @@ class TxDBData:
     i_raw_tx: str = None
     i_redeem_raw_tx: str = None
     p_currency: str = None  # TODO: Make Currency Dataclass
-    p_want_amount: int = None
+    p_receive_amount: int = None
     p_addr: str = None
     p_raw_tx: str = None
     p_redeem_raw_tx: str = None
@@ -73,7 +73,7 @@ class TxDBData:
             ("i_raw_tx", str),
             ("i_redeem_raw_tx", str),
             ("p_currency", str),
-            ("p_want_amount", int),
+            ("p_receive_amount", int),
             ("p_addr", str),
             ("p_raw_tx", str),
             ("p_redeem_raw_tx", str),
