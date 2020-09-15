@@ -85,14 +85,14 @@ api = s4_api = API()
 
 
 @api.route("/")
-def server_info(_: Request, resp: Response):
+def server_info(_: Request, resp: Response) -> None:
     resp.media = {
         "message": "This server is working."
     }
 
 
 @api.route("/get_token")
-def get_token(_: Request, resp: Response):
+def get_token(_: Request, resp: Response) -> None:
     raw_token = secrets.token_bytes(64)
     token = b58.b2a_base58(raw_token)
     hashed_token = sha256d(raw_token)
@@ -115,7 +115,7 @@ def get_token(_: Request, resp: Response):
 
 
 @api.route("/verify_token/{token}")
-def verify_token(_: Request, resp: Response, token: str):
+def verify_token(_: Request, resp: Response, token: str) -> None:
     try:
         exist = token_db.verify_token(token)
     except Exception:
