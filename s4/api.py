@@ -91,7 +91,7 @@ def server_info(_: Request, resp: Response) -> None:
     }
 
 
-@api.route("/get_token")
+@api.route("/get_token/")
 def get_token(_: Request, resp: Response) -> None:
     raw_token = secrets.token_bytes(64)
     token = b58.b2a_base58(raw_token)
