@@ -30,11 +30,12 @@ from responder import API as ResponderAPI
 from responder.models import Request, Response
 from uvicorn import Config, Server
 from pycoin.encoding import b58
+from typing import Dict
 
-from .db import TokenDB, TokenDBData
+from .db import TokenDB, TokenDBData, TxDB, TxDBData
 from .util import sha256d
 
-
+tx_db = TxDB()
 token_db = TokenDB()
 
 
@@ -128,3 +129,75 @@ def verify_token(_: Request, resp: Response, token: str) -> None:
 
     resp.media = result
 
+
+@api.route("/register_swap/")
+async def register_token(req: Request, resp: Response) -> None:
+    request: Dict = await req.media()
+    token: str = request.get("token")
+    try:
+        exist = token_db.verify_token(token)
+    except Exception:
+        exist = False
+
+    raw_token = b58.a2b_base58(token)
+    hashed_token = sha256d(raw_token)
+    try:
+        used = bool(tx_db.get(hashed_token))
+    except Exception:
+        used = False
+
+    if not exist:
+        result = {
+            "code": "Failed",
+            "error": "Token is not registered or is invalid."
+        }
+    elif used:
+        result = {
+            "code": "Failed",
+            "error": "Token is already used."
+        }
+    else:
+        want_currency: str = request.get("want_currency")
+        want_amount: int = request.get("want_amount")
+        send_currency: str = request.get("send_currency")
+        send_amount: int = request.get("send_amount")
+        receive_address: str = request.get("receive_address")
+        try:
+            if want_amount.count(".") or send_amount.count("."):
+                raise  # amount type isn't int...
+            want_amount = int(want_amount)
+            send_amount = int(send_amount)
+        except Exception:
+            pass
+
+        if not (
+                isinstance(want_currency, str) and
+                isinstance(want_amount, int) and
+                isinstance(send_currency, str) and
+                isinstance(send_amount, int) and
+                isinstance(receive_address, str)
+        ):
+            result = {
+                "code": "Failed",
+                "error": "Request data is invalid."
+            }
+        else:
+            data = TxDBData(
+                i_currency=want_currency,
+                i_receive_amount=send_amount,
+                p_currency=send_currency,
+                p_receive_amount=want_amount,
+                p_addr=receive_address
+            )
+            try:
+                tx_db.put(hashed_token, data)
+                result = {
+                    "code": "Success"
+                }
+            except Exception as e:
+                result = {
+                    "code": "Failed",
+                    "error": str(e)
+                }
+
+    resp.media = result
