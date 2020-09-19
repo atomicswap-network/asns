@@ -1,4 +1,5 @@
-responder
+fastapi
+pydantic
 uvicorn
 plyvel
 pycoin

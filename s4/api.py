@@ -26,11 +26,11 @@ import os
 import secrets
 import time
 
-from responder import API as ResponderAPI
-from responder.models import Request, Response
+from fastapi import FastAPI
+from pydantic import BaseModel
 from uvicorn import Config, Server
 from pycoin.encoding import b58
-from typing import Dict
+from typing import Dict, Optional, Union, Any
 
 from .db import SwapStatus, TokenDB, TokenDBData, TxDB, TxDBData
 from .util import sha256d
@@ -61,7 +61,7 @@ async def api_spawn(app, **kwargs) -> None:
         await server.serve()
 
 
-class API(ResponderAPI):
+class API(FastAPI):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -85,15 +85,24 @@ class API(ResponderAPI):
 api = s4_api = API()
 
 
-@api.route("/")
-def server_info(_: Request, resp: Response) -> None:
-    resp.media = {
+class RegisterSwapItem(BaseModel):
+    token: Any
+    wantCurrency: Any
+    wantAmount: Any
+    sendCurrency: Any
+    sendAmount: Any
+    receiveAddress: Any
+
+
+@api.get("/")
+def server_info() -> Dict[str, str]:
+    return {
         "message": "This server is working."
     }
 
 
-@api.route("/get_token/")
-def get_token(_: Request, resp: Response) -> None:
+@api.get("/get_token/")
+def get_token() -> Union[Dict[str, Union[str, Any]], Dict[str, Optional[str]]]:
     raw_token = secrets.token_bytes(64)
     token = b58.b2a_base58(raw_token)
     hashed_token = sha256d(raw_token)
@@ -112,39 +121,41 @@ def get_token(_: Request, resp: Response) -> None:
             "error": str(e)
         }
 
-    resp.media = result
+    return result
 
 
-@api.route("/verify_token/{token}")
-def verify_token(_: Request, resp: Response, token: str) -> None:
+@api.get("/verify_token/{token}")
+def verify_token(token: str) -> Dict[str, Union[str, bool]]:
     try:
         exist = token_db.verify_token(token)
     except Exception:
         exist = False
 
-    result = {
+    return {
         "code": "Success",
         "exist": exist
     }
 
-    resp.media = result
 
+@api.post("/register_swap/")
+async def register_token(item: RegisterSwapItem) -> Dict[str, str]:
+    token: str = item.token
 
-@api.route("/register_swap/")
-async def register_token(req: Request, resp: Response) -> None:
-    request: Dict = await req.media()
-    token: str = request.get("token")
+    exist = False
+    used = False
+
     try:
         exist = token_db.verify_token(token)
     except Exception:
-        exist = False
+        pass
 
-    raw_token = b58.a2b_base58(token)
-    hashed_token = sha256d(raw_token)
-    try:
-        used = bool(tx_db.get(hashed_token))
-    except Exception:
-        used = False
+    if exist:
+        raw_token = b58.a2b_base58(token)
+        hashed_token = sha256d(raw_token)
+        try:
+            used = bool(tx_db.get(hashed_token))
+        except Exception:
+            pass
 
     if not exist:
         result = {
@@ -157,11 +168,12 @@ async def register_token(req: Request, resp: Response) -> None:
             "error": "Token is already used."
         }
     else:
-        want_currency: str = request.get("wantCurrency")
-        want_amount: int = request.get("wantAmount")
-        send_currency: str = request.get("sendCurrency")
-        send_amount: int = request.get("sendAmount")
-        receive_address: str = request.get("receiveAddress")
+        want_currency = item.wantCurrency
+        want_amount = item.wantAmount
+        send_currency = item.sendCurrency
+        send_amount = item.sendAmount
+        receive_address = item.receiveAddress
+
         try:
             if want_amount.count(".") or send_amount.count("."):
                 raise  # amount type isn't int...
@@ -201,11 +213,11 @@ async def register_token(req: Request, resp: Response) -> None:
                     "error": str(e)
                 }
 
-    resp.media = result
+    return result
 
 
-@api.route("/get_swap_list/")
-def get_swap_list(_: Request, res: Response) -> None:
+@api.get("/get_swap_list/")
+def get_swap_list() -> Dict[str, Dict[str, Union[str, int]]]:
     all_list = tx_db.get_all()
     result = {}
     for key in all_list.keys():
@@ -219,4 +231,4 @@ def get_swap_list(_: Request, res: Response) -> None:
                 "participator_address": value.p_addr
             }
 
-    res.media = result
+    return result
