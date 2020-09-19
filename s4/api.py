@@ -157,11 +157,11 @@ async def register_token(req: Request, resp: Response) -> None:
             "error": "Token is already used."
         }
     else:
-        want_currency: str = request.get("want_currency")
-        want_amount: int = request.get("want_amount")
-        send_currency: str = request.get("send_currency")
-        send_amount: int = request.get("send_amount")
-        receive_address: str = request.get("receive_address")
+        want_currency: str = request.get("wantCurrency")
+        want_amount: int = request.get("wantAmount")
+        send_currency: str = request.get("sendCurrency")
+        send_amount: int = request.get("sendAmount")
+        receive_address: str = request.get("receiveAddress")
         try:
             if want_amount.count(".") or send_amount.count("."):
                 raise  # amount type isn't int...
