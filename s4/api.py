@@ -32,7 +32,7 @@ from uvicorn import Config, Server
 from pycoin.encoding import b58
 from typing import Dict
 
-from .db import TokenDB, TokenDBData, TxDB, TxDBData
+from .db import SwapStatus, TokenDB, TokenDBData, TxDB, TxDBData
 from .util import sha256d
 
 tx_db = TxDB()
@@ -201,3 +201,21 @@ async def register_token(req: Request, resp: Response) -> None:
                 }
 
     resp.media = result
+
+
+@api.route("/get_swap_list/")
+def get_swap_list(_: Request, res: Response) -> None:
+    all_list = tx_db.get_all()
+    result = {}
+    for key in all_list.keys():
+        value = all_list[key]
+        if value.swap_status == SwapStatus.REGISTERED:
+            result[key.hex()] = {
+                "initiator_currency": value.i_currency,
+                "initiator_receive_amount": value.i_receive_amount,
+                "participator_currency": value.p_currency,
+                "participator_receive_amount": value.p_receive_amount,
+                "participator_address": value.p_addr
+            }
+
+    res.media = result
