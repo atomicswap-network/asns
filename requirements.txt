@@ -1,5 +1,4 @@
 fastapi
-pydantic
 uvicorn
 plyvel
 pycoin
