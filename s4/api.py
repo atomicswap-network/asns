@@ -170,6 +170,7 @@ async def register_token(req: Request, resp: Response) -> None:
         except Exception:
             pass
 
+        # TODO: Receive Address Validation
         if not (
                 isinstance(want_currency, str) and
                 isinstance(want_amount, int) and
