@@ -149,6 +149,13 @@ class TxDB(DBBase):
         deserialized_value = pickle.loads(value)
         return TxDBData.from_dict(deserialized_value)
 
+    def get_all(self) -> Dict[bytes, TxDBData]:
+        values = {}
+        for key, value in self.db:
+            deserialized_value = pickle.loads(value)
+            values[key] = TxDBData.from_dict(deserialized_value)
+        return values
+
 
 class TokenDB(DBBase):
     def __init__(self) -> None:
