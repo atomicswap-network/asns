@@ -26,11 +26,14 @@ import os
 import secrets
 import time
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from uvicorn import Config, Server
 from pycoin.encoding import b58
-from typing import Dict, Optional, Union, Any
+from typing import Dict, Optional, Union, Any, List
 
 from .db import SwapStatus, TokenDB, TokenDBData, TxDB, TxDBData
 from .util import sha256d
@@ -92,6 +95,34 @@ class RegisterSwapItem(BaseModel):
     sendCurrency: str
     sendAmount: Union[int, float]
     receiveAddress: str
+
+
+@api.exception_handler(RequestValidationError)
+async def validation_exception_handler(_: Request, exc: RequestValidationError):
+    err_msg: List[str] = []
+    target_requests: List[List[str]] = []
+    for err in exc.errors():
+        msg = err["msg"]
+        if msg not in err_msg:
+            err_msg.append(msg)
+        msg_index = err_msg.index(msg)
+        target = err["loc"][1]
+        try:
+            target_requests[msg_index].append(target)
+        except IndexError:
+            target_requests.append([target])
+
+    result: List[Dict[str, Union[str, List[str]]]] = []
+    for i in range(len(err_msg)):
+        err = {
+            "message": err_msg[i],
+            "target": target_requests[i]
+        }
+        result.append(err)
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content=jsonable_encoder({"code": "Failed", "error": result}),
+    )
 
 
 @api.get("/")
