@@ -86,12 +86,12 @@ api = s4_api = API()
 
 
 class RegisterSwapItem(BaseModel):
-    token: Any
-    wantCurrency: Any
-    wantAmount: Any
-    sendCurrency: Any
-    sendAmount: Any
-    receiveAddress: Any
+    token: str
+    wantCurrency: str
+    wantAmount: Union[int, float]
+    sendCurrency: str
+    sendAmount: Union[int, float]
+    receiveAddress: str
 
 
 @api.get("/")
@@ -175,7 +175,7 @@ async def register_token(item: RegisterSwapItem) -> Dict[str, str]:
         receive_address = item.receiveAddress
 
         try:
-            if want_amount.count(".") or send_amount.count("."):
+            if str(want_amount).count(".") or str(send_amount).count("."):
                 raise  # amount type isn't int...
             want_amount = int(want_amount)
             send_amount = int(send_amount)
