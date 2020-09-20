@@ -223,6 +223,7 @@ async def register_token(item: RegisterSwapItem) -> JSONResponse:
         receive_address = item.receiveAddress
 
         # TODO: Receive Address Validation
+        # TODO: Want/Send Currency Validation
 
         data = TxDBData(
             i_currency=want_currency,
