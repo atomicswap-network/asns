@@ -101,7 +101,7 @@ class RegisterSwapItem(BaseModel):
 @api.exception_handler(StarletteHTTPException)
 async def http_exception_handler(_: Request, exc: StarletteHTTPException):
     return JSONResponse(
-        content=jsonable_encoder({"code": "Failed", "error": str(exc.detail)})
+        content=jsonable_encoder({"status": "Failed", "error": str(exc.detail)})
     )
 
 
@@ -129,7 +129,7 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError):
         result.append(err)
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
-        content=jsonable_encoder({"code": "Failed", "error": result}),
+        content=jsonable_encoder({"status": "Failed", "error": result}),
     )
 
 
@@ -150,7 +150,7 @@ def get_token() -> JSONResponse:
     hashed_token = sha256d(raw_token)
     created_at = int(time.time())
     result = {
-        "code": "Success",
+        "status": "Success",
         "token": token
     }
 
@@ -159,7 +159,7 @@ def get_token() -> JSONResponse:
     except Exception as e:
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         result = {
-            "code": "Failed",
+            "status": "Failed",
             "token": None,
             "error": str(e)
         }
@@ -175,7 +175,7 @@ def verify_token(token: str) -> JSONResponse:
         exist = False
 
     result = {
-        "code": "Success",
+        "status": "Success",
         "exist": exist
     }
 
@@ -206,13 +206,13 @@ async def register_token(item: RegisterSwapItem) -> JSONResponse:
     if not exist:
         status_code = status.HTTP_400_BAD_REQUEST
         result = {
-            "code": "Failed",
+            "status": "Failed",
             "error": "Token is not registered or is invalid."
         }
     elif used:
         status_code = status.HTTP_400_BAD_REQUEST
         result = {
-            "code": "Failed",
+            "status": "Failed",
             "error": "Token is already used."
         }
     else:
@@ -240,7 +240,7 @@ async def register_token(item: RegisterSwapItem) -> JSONResponse:
         ):
             status_code = status.HTTP_400_BAD_REQUEST
             result = {
-                "code": "Failed",
+                "status": "Failed",
                 "error": "Request data is invalid."
             }
         else:
@@ -254,12 +254,12 @@ async def register_token(item: RegisterSwapItem) -> JSONResponse:
             try:
                 tx_db.put(hashed_token, data)
                 result = {
-                    "code": "Success"
+                    "status": "Success"
                 }
             except Exception as e:
                 status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
                 result = {
-                    "code": "Failed",
+                    "status": "Failed",
                     "error": str(e)
                 }
 
