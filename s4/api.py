@@ -271,15 +271,21 @@ def get_swap_list() -> JSONResponse:
     status_code = status.HTTP_200_OK
     try:
         all_list = tx_db.get_all()
+        result = {
+            "status": "Success",
+            "data": {}
+        }
     except Exception:
         all_list = []
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-
-    result = {}
+        result = {
+            "status": "Falied",
+            "data": {}
+        }
     for key in all_list.keys():
         value = all_list[key]
         if value.swap_status == SwapStatus.REGISTERED:
-            result[key.hex()] = {
+            result["data"][key.hex()] = {
                 "initiator_currency": value.i_currency,
                 "initiator_receive_amount": value.i_receive_amount,
                 "participator_currency": value.p_currency,
