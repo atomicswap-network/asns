@@ -134,14 +134,17 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError):
 
 
 @api.get("/")
-def server_info() -> Dict[str, str]:
-    return {
+def server_info() -> JSONResponse:
+    result = {
         "message": "This server is working."
     }
 
+    return JSONResponse(content=jsonable_encoder(result))
+
 
 @api.get("/get_token/")
-def get_token() -> Union[Dict[str, Union[str, Any]], Dict[str, Optional[str]]]:
+def get_token() -> JSONResponse:
+    status_code = status.HTTP_200_OK
     raw_token = secrets.token_bytes(64)
     token = b58.b2a_base58(raw_token)
     hashed_token = sha256d(raw_token)
@@ -154,32 +157,36 @@ def get_token() -> Union[Dict[str, Union[str, Any]], Dict[str, Optional[str]]]:
     try:
         token_db.put(hashed_token, TokenDBData(created_at))
     except Exception as e:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         result = {
             "code": "Failed",
             "token": None,
             "error": str(e)
         }
 
-    return result
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
 
 @api.get("/verify_token/{token}")
-def verify_token(token: str) -> Dict[str, Union[str, bool]]:
+def verify_token(token: str) -> JSONResponse:
     try:
         exist = token_db.verify_token(token)
     except Exception:
         exist = False
 
-    return {
+    result = {
         "code": "Success",
         "exist": exist
     }
 
+    return JSONResponse(content=jsonable_encoder(result))
+
 
 @api.post("/register_swap/")
-async def register_token(item: RegisterSwapItem) -> Dict[str, str]:
+async def register_token(item: RegisterSwapItem) -> JSONResponse:
     token: str = item.token
 
+    status_code = status.HTTP_200_OK
     exist = False
     used = False
 
@@ -197,11 +204,13 @@ async def register_token(item: RegisterSwapItem) -> Dict[str, str]:
             pass
 
     if not exist:
+        status_code = status.HTTP_400_BAD_REQUEST
         result = {
             "code": "Failed",
             "error": "Token is not registered or is invalid."
         }
     elif used:
+        status_code = status.HTTP_400_BAD_REQUEST
         result = {
             "code": "Failed",
             "error": "Token is already used."
@@ -229,6 +238,7 @@ async def register_token(item: RegisterSwapItem) -> Dict[str, str]:
                 isinstance(send_amount, int) and
                 isinstance(receive_address, str)
         ):
+            status_code = status.HTTP_400_BAD_REQUEST
             result = {
                 "code": "Failed",
                 "error": "Request data is invalid."
@@ -247,17 +257,24 @@ async def register_token(item: RegisterSwapItem) -> Dict[str, str]:
                     "code": "Success"
                 }
             except Exception as e:
+                status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
                 result = {
                     "code": "Failed",
                     "error": str(e)
                 }
 
-    return result
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
 
 @api.get("/get_swap_list/")
-def get_swap_list() -> Dict[str, Dict[str, Union[str, int]]]:
-    all_list = tx_db.get_all()
+def get_swap_list() -> JSONResponse:
+    status_code = status.HTTP_200_OK
+    try:
+        all_list = tx_db.get_all()
+    except Exception:
+        all_list = []
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
     result = {}
     for key in all_list.keys():
         value = all_list[key]
@@ -270,4 +287,4 @@ def get_swap_list() -> Dict[str, Dict[str, Union[str, int]]]:
                 "participator_address": value.p_addr
             }
 
-    return result
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
