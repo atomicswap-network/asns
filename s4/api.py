@@ -267,11 +267,11 @@ def get_swap_list() -> JSONResponse:
         value = all_list[key]
         if value.swap_status == SwapStatus.REGISTERED:
             result["data"][key.hex()] = {
-                "initiator_currency": value.i_currency,
-                "initiator_receive_amount": value.i_receive_amount,
-                "participator_currency": value.p_currency,
-                "participator_receive_amount": value.p_receive_amount,
-                "participator_address": value.p_addr
+                "initiatorCurrency": value.i_currency,
+                "initiatorReceiveAmount": value.i_receive_amount,
+                "participatorCurrency": value.p_currency,
+                "participatorReceiveAmount": value.p_receive_amount,
+                "participatorAddress": value.p_addr
             }
 
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
