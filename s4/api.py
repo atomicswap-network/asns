@@ -26,11 +26,15 @@ import os
 import secrets
 import time
 
-from responder import API as ResponderAPI
-from responder.models import Request, Response
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from pydantic import BaseModel
 from uvicorn import Config, Server
 from pycoin.encoding import b58
-from typing import Dict
+from typing import Dict, Optional, Union, Any, List
 
 from .db import SwapStatus, TokenDB, TokenDBData, TxDB, TxDBData
 from .util import sha256d
@@ -61,7 +65,7 @@ async def api_spawn(app, **kwargs) -> None:
         await server.serve()
 
 
-class API(ResponderAPI):
+class API(FastAPI):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -85,132 +89,184 @@ class API(ResponderAPI):
 api = s4_api = API()
 
 
-@api.route("/")
-def server_info(_: Request, resp: Response) -> None:
-    resp.media = {
+class RegisterSwapItem(BaseModel):
+    token: str
+    wantCurrency: str
+    wantAmount: int
+    sendCurrency: str
+    sendAmount: int
+    receiveAddress: str
+
+
+@api.exception_handler(StarletteHTTPException)
+async def http_exception_handler(_: Request, exc: StarletteHTTPException):
+    return JSONResponse(
+        content=jsonable_encoder({"status": "Failed", "error": str(exc.detail)})
+    )
+
+
+@api.exception_handler(RequestValidationError)
+async def validation_exception_handler(_: Request, exc: RequestValidationError):
+    err_msg: List[str] = []
+    target_requests: List[List[str]] = []
+    for err in exc.errors():
+        msg = err["msg"]
+        if msg not in err_msg:
+            err_msg.append(msg)
+        msg_index = err_msg.index(msg)
+        target = err["loc"][1]
+        try:
+            target_requests[msg_index].append(target)
+        except IndexError:
+            target_requests.append([target])
+
+    result: List[Dict[str, Union[str, List[str]]]] = []
+    for i in range(len(err_msg)):
+        err = {
+            "message": err_msg[i],
+            "target": target_requests[i]
+        }
+        result.append(err)
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content=jsonable_encoder({"status": "Failed", "error": result}),
+    )
+
+
+@api.get("/")
+def server_info() -> JSONResponse:
+    result = {
         "message": "This server is working."
     }
 
+    return JSONResponse(content=jsonable_encoder(result))
 
-@api.route("/get_token/")
-def get_token(_: Request, resp: Response) -> None:
+
+@api.get("/get_token/")
+def get_token() -> JSONResponse:
+    status_code = status.HTTP_200_OK
     raw_token = secrets.token_bytes(64)
     token = b58.b2a_base58(raw_token)
     hashed_token = sha256d(raw_token)
     created_at = int(time.time())
     result = {
-        "code": "Success",
+        "status": "Success",
         "token": token
     }
 
     try:
         token_db.put(hashed_token, TokenDBData(created_at))
     except Exception as e:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         result = {
-            "code": "Failed",
+            "status": "Failed",
             "token": None,
             "error": str(e)
         }
 
-    resp.media = result
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
 
-@api.route("/verify_token/{token}")
-def verify_token(_: Request, resp: Response, token: str) -> None:
+@api.get("/verify_token/")
+def verify_token(token: str = "") -> JSONResponse:
     try:
         exist = token_db.verify_token(token)
     except Exception:
         exist = False
 
     result = {
-        "code": "Success",
+        "status": "Success",
         "exist": exist
     }
 
-    resp.media = result
+    return JSONResponse(content=jsonable_encoder(result))
 
 
-@api.route("/register_swap/")
-async def register_token(req: Request, resp: Response) -> None:
-    request: Dict = await req.media()
-    token: str = request.get("token")
+@api.post("/register_swap/")
+async def register_token(item: RegisterSwapItem) -> JSONResponse:
+    token: str = item.token
+
+    status_code = status.HTTP_200_OK
+    exist = False
+    used = False
+
     try:
         exist = token_db.verify_token(token)
     except Exception:
-        exist = False
+        pass
 
-    raw_token = b58.a2b_base58(token)
-    hashed_token = sha256d(raw_token)
-    try:
-        used = bool(tx_db.get(hashed_token))
-    except Exception:
-        used = False
-
-    if not exist:
-        result = {
-            "code": "Failed",
-            "error": "Token is not registered or is invalid."
-        }
-    elif used:
-        result = {
-            "code": "Failed",
-            "error": "Token is already used."
-        }
-    else:
-        want_currency: str = request.get("wantCurrency")
-        want_amount: int = request.get("wantAmount")
-        send_currency: str = request.get("sendCurrency")
-        send_amount: int = request.get("sendAmount")
-        receive_address: str = request.get("receiveAddress")
+    if exist:
+        raw_token = b58.a2b_base58(token)
+        hashed_token = sha256d(raw_token)
         try:
-            if want_amount.count(".") or send_amount.count("."):
-                raise  # amount type isn't int...
-            want_amount = int(want_amount)
-            send_amount = int(send_amount)
+            used = bool(tx_db.get(hashed_token))
         except Exception:
             pass
 
-        if not (
-                isinstance(want_currency, str) and
-                isinstance(want_amount, int) and
-                isinstance(send_currency, str) and
-                isinstance(send_amount, int) and
-                isinstance(receive_address, str)
-        ):
+    if not exist:
+        status_code = status.HTTP_400_BAD_REQUEST
+        result = {
+            "status": "Failed",
+            "error": "Token is not registered or is invalid."
+        }
+    elif used:
+        status_code = status.HTTP_400_BAD_REQUEST
+        result = {
+            "status": "Failed",
+            "error": "Token is already used."
+        }
+    else:
+        want_currency = item.wantCurrency
+        want_amount = item.wantAmount
+        send_currency = item.sendCurrency
+        send_amount = item.sendAmount
+        receive_address = item.receiveAddress
+
+        # TODO: Receive Address Validation
+        # TODO: Want/Send Currency Validation
+
+        data = TxDBData(
+            i_currency=want_currency,
+            i_receive_amount=send_amount,
+            p_currency=send_currency,
+            p_receive_amount=want_amount,
+            p_addr=receive_address
+        )
+        try:
+            tx_db.put(hashed_token, data)
             result = {
-                "code": "Failed",
-                "error": "Request data is invalid."
+                "status": "Success"
             }
-        else:
-            data = TxDBData(
-                i_currency=want_currency,
-                i_receive_amount=send_amount,
-                p_currency=send_currency,
-                p_receive_amount=want_amount,
-                p_addr=receive_address
-            )
-            try:
-                tx_db.put(hashed_token, data)
-                result = {
-                    "code": "Success"
-                }
-            except Exception as e:
-                result = {
-                    "code": "Failed",
-                    "error": str(e)
-                }
+        except Exception as e:
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            result = {
+                "status": "Failed",
+                "error": str(e)
+            }
 
-    resp.media = result
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
 
-@api.route("/get_swap_list/")
-def get_swap_list(_: Request, res: Response) -> None:
-    all_list = tx_db.get_all()
-    result = {}
+@api.get("/get_swap_list/")
+def get_swap_list() -> JSONResponse:
+    status_code = status.HTTP_200_OK
+    try:
+        all_list = tx_db.get_all()
+        result = {
+            "status": "Success",
+            "data": {}
+        }
+    except Exception:
+        all_list = []
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        result = {
+            "status": "Failed",
+            "data": {}
+        }
     for key in all_list.keys():
         value = all_list[key]
         if value.swap_status == SwapStatus.REGISTERED:
-            result[key.hex()] = {
+            result["data"][key.hex()] = {
                 "initiator_currency": value.i_currency,
                 "initiator_receive_amount": value.i_receive_amount,
                 "participator_currency": value.p_currency,
@@ -218,4 +274,4 @@ def get_swap_list(_: Request, res: Response) -> None:
                 "participator_address": value.p_addr
             }
 
-    res.media = result
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
