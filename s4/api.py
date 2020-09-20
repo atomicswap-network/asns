@@ -91,9 +91,9 @@ api = s4_api = API()
 class RegisterSwapItem(BaseModel):
     token: str
     wantCurrency: str
-    wantAmount: Union[int, float]
+    wantAmount: int
     sendCurrency: str
-    sendAmount: Union[int, float]
+    sendAmount: int
     receiveAddress: str
 
 
