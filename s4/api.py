@@ -222,46 +222,26 @@ async def register_token(item: RegisterSwapItem) -> JSONResponse:
         send_amount = item.sendAmount
         receive_address = item.receiveAddress
 
-        try:
-            if str(want_amount).count(".") or str(send_amount).count("."):
-                raise  # amount type isn't int...
-            want_amount = int(want_amount)
-            send_amount = int(send_amount)
-        except Exception:
-            pass
-
         # TODO: Receive Address Validation
-        if not (
-                isinstance(want_currency, str) and
-                isinstance(want_amount, int) and
-                isinstance(send_currency, str) and
-                isinstance(send_amount, int) and
-                isinstance(receive_address, str)
-        ):
-            status_code = status.HTTP_400_BAD_REQUEST
+
+        data = TxDBData(
+            i_currency=want_currency,
+            i_receive_amount=send_amount,
+            p_currency=send_currency,
+            p_receive_amount=want_amount,
+            p_addr=receive_address
+        )
+        try:
+            tx_db.put(hashed_token, data)
+            result = {
+                "status": "Success"
+            }
+        except Exception as e:
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
             result = {
                 "status": "Failed",
-                "error": "Request data is invalid."
+                "error": str(e)
             }
-        else:
-            data = TxDBData(
-                i_currency=want_currency,
-                i_receive_amount=send_amount,
-                p_currency=send_currency,
-                p_receive_amount=want_amount,
-                p_addr=receive_address
-            )
-            try:
-                tx_db.put(hashed_token, data)
-                result = {
-                    "status": "Success"
-                }
-            except Exception as e:
-                status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-                result = {
-                    "status": "Failed",
-                    "error": str(e)
-                }
 
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
