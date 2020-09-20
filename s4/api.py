@@ -260,7 +260,7 @@ def get_swap_list() -> JSONResponse:
         all_list = []
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         result = {
-            "status": "Falied",
+            "status": "Failed",
             "data": {}
         }
     for key in all_list.keys():
