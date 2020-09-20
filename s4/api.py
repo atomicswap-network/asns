@@ -167,8 +167,8 @@ def get_token() -> JSONResponse:
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
 
-@api.get("/verify_token/{token}")
-def verify_token(token: str) -> JSONResponse:
+@api.get("/verify_token/")
+def verify_token(token: str = "") -> JSONResponse:
     try:
         exist = token_db.verify_token(token)
     except Exception:
