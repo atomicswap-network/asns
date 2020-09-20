@@ -30,6 +30,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from uvicorn import Config, Server
 from pycoin.encoding import b58
@@ -95,6 +96,13 @@ class RegisterSwapItem(BaseModel):
     sendCurrency: str
     sendAmount: int
     receiveAddress: str
+
+
+@api.exception_handler(StarletteHTTPException)
+async def http_exception_handler(_: Request, exc: StarletteHTTPException):
+    return JSONResponse(
+        content=jsonable_encoder({"code": "Failed", "error": str(exc.detail)})
+    )
 
 
 @api.exception_handler(RequestValidationError)
