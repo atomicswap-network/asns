@@ -26,7 +26,7 @@ import os
 import secrets
 import time
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Depends, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
@@ -38,9 +38,6 @@ from typing import Dict, Optional, Union, Any, List
 
 from .db import SwapStatus, TokenDB, TokenDBData, TxDB, TxDBData
 from .util import sha256d
-
-tx_db = TxDB()
-token_db = TokenDB()
 
 
 async def api_spawn(app, **kwargs) -> None:
@@ -68,6 +65,7 @@ async def api_spawn(app, **kwargs) -> None:
 class API(FastAPI):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.db_base_path = None
 
     async def serve(self, *, address=None, port=None, debug=False, **options):
         if "PORT" in os.environ:
@@ -133,6 +131,12 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError):
     )
 
 
+class DBCommons:
+    def __init__(self) -> None:
+        self.tx_db = TxDB(api.db_base_path)
+        self.token_db = TokenDB(api.db_base_path)
+
+
 @api.get("/")
 def server_info() -> JSONResponse:
     result = {
@@ -143,7 +147,7 @@ def server_info() -> JSONResponse:
 
 
 @api.get("/get_token/")
-def get_token() -> JSONResponse:
+def get_token(commons: DBCommons = Depends()) -> JSONResponse:
     status_code = status.HTTP_200_OK
     raw_token = secrets.token_bytes(64)
     token = b58.b2a_base58(raw_token)
@@ -155,7 +159,7 @@ def get_token() -> JSONResponse:
     }
 
     try:
-        token_db.put(hashed_token, TokenDBData(created_at))
+        commons.token_db.put(hashed_token, TokenDBData(created_at))
     except Exception as e:
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         result = {
@@ -168,9 +172,9 @@ def get_token() -> JSONResponse:
 
 
 @api.get("/verify_token/")
-def verify_token(token: str = "") -> JSONResponse:
+def verify_token(commons: DBCommons = Depends(), token: str = "") -> JSONResponse:
     try:
-        exist = token_db.verify_token(token)
+        exist = commons.token_db.verify_token(token)
     except Exception:
         exist = False
 
@@ -183,7 +187,7 @@ def verify_token(token: str = "") -> JSONResponse:
 
 
 @api.post("/register_swap/")
-async def register_token(item: RegisterSwapItem) -> JSONResponse:
+async def register_token(item: RegisterSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
     token: str = item.token
 
     status_code = status.HTTP_200_OK
@@ -191,7 +195,7 @@ async def register_token(item: RegisterSwapItem) -> JSONResponse:
     used = False
 
     try:
-        exist = token_db.verify_token(token)
+        exist = commons.token_db.verify_token(token)
     except Exception:
         pass
 
@@ -199,7 +203,7 @@ async def register_token(item: RegisterSwapItem) -> JSONResponse:
         raw_token = b58.a2b_base58(token)
         hashed_token = sha256d(raw_token)
         try:
-            used = bool(tx_db.get(hashed_token))
+            used = bool(commons.tx_db.get(hashed_token))
         except Exception:
             pass
 
@@ -233,7 +237,7 @@ async def register_token(item: RegisterSwapItem) -> JSONResponse:
             p_addr=receive_address
         )
         try:
-            tx_db.put(hashed_token, data)
+            commons.tx_db.put(hashed_token, data)
             result = {
                 "status": "Success"
             }
@@ -248,10 +252,10 @@ async def register_token(item: RegisterSwapItem) -> JSONResponse:
 
 
 @api.get("/get_swap_list/")
-def get_swap_list() -> JSONResponse:
+def get_swap_list(commons: DBCommons = Depends()) -> JSONResponse:
     status_code = status.HTTP_200_OK
     try:
-        all_list = tx_db.get_all()
+        all_list = commons.tx_db.get_all()
         result = {
             "status": "Success",
             "data": {}
