@@ -37,7 +37,9 @@ def get_path() -> str:
     elif os_name == "Linux":
         path = os.path.expanduser("~/")
     else:
-        raise Exception("Your using OS isn't support!")
+        raise Exception(
+            "Please set database save path by '--base_path' option. (ex. ./run_s4 --base_path=/home/user/s4/)"
+        )
     return path
 
 

@@ -22,6 +22,7 @@
 
 import asyncio
 import sys
+import os
 
 from s4 import s4_api, get_path
 
@@ -33,7 +34,9 @@ if __name__ == '__main__':
     base_path = None
     if len(argv) == 2:
         if argv[1].startswith("--base_path="):
-            base_path = argv[1][12:]
+            base_path = os.path.expanduser(argv[1][12:])
+            if not os.path.isdir(os.path.split(base_path)[0]):
+                raise Exception("The specified folder can't be created.")
     s4_api.db_base_path = base_path
     loop = asyncio.get_event_loop()
     gather = asyncio.gather(
