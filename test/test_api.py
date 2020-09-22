@@ -17,3 +17,11 @@ class TestAPI(unittest.TestCase):
     def tearDown(self):
         super().tearDown()
         shutil.rmtree(self.s4_path)
+
+    def test_index(self):
+        response = self.client.get("/")
+        right_result = {
+            "message": "This server is working."
+        }
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), right_result)
