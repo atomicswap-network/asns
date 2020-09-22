@@ -124,9 +124,9 @@ class TokenDBData:
 
 
 class DBBase:
-    def __init__(self, db_name: str) -> None:
-        os.makedirs(root_path, exist_ok=True)
-        self.db = plyvel.DB(os.path.join(root_path, db_name), create_if_missing=True)
+    def __init__(self, db_name: str, db_base_path: str = root_path) -> None:
+        os.makedirs(db_base_path, exist_ok=True)
+        self.db = plyvel.DB(os.path.join(db_base_path, db_name), create_if_missing=True)
 
     def put(self, key: str, value: Union[TxDBData, TokenDBData]) -> None:
         raise NotImplementedError
@@ -136,8 +136,8 @@ class DBBase:
 
 
 class TxDB(DBBase):
-    def __init__(self) -> None:
-        super().__init__("tx_db")
+    def __init__(self, db_base_path: str = None) -> None:
+        super().__init__("tx_db", db_base_path)
 
     def put(self, key: bytes, value: TxDBData) -> None:
         assert isinstance(value, TxDBData), f"Data type is inappropriate!({type(value).__name__})"
@@ -158,8 +158,8 @@ class TxDB(DBBase):
 
 
 class TokenDB(DBBase):
-    def __init__(self) -> None:
-        super().__init__("token_db")
+    def __init__(self, db_base_path: str = None) -> None:
+        super().__init__("token_db", db_base_path)
 
     def put(self, key: bytes, value: TokenDBData) -> None:
         assert isinstance(value, TokenDBData), f"Data type is inappropriate!({type(value).__name__})"
