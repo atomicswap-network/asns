@@ -34,7 +34,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from uvicorn import Config, Server
 from pycoin.encoding import b58
-from typing import Dict, Optional, Union, Any, List
+from typing import Dict, Union, List
 
 from .db import SwapStatus, TokenDB, TokenDBData, TxDB, TxDBData
 from .util import sha256d
