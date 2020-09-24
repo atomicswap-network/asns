@@ -27,9 +27,10 @@ import hashlib
 
 from typing import Union
 
+os_name = platform.system()
+
 
 def get_path() -> str:
-    os_name = platform.system()
     if os_name == "Windows":
         path = os.path.expanduser("~/AppData/Roaming/")
     elif os_name == "Darwin":
@@ -43,7 +44,7 @@ def get_path() -> str:
     return path
 
 
-root_path = os.path.join(get_path(), "swap-san-server")
+root_path = os.path.join(get_path(), f'{"" if os_name == "Windows" else "."}swap-san-server')
 
 
 def to_bytes(something, encoding="utf8") -> bytes:
