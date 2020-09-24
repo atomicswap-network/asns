@@ -44,7 +44,7 @@ def get_path() -> str:
     return path
 
 
-root_path = os.path.join(get_path(), f'{"" if os_name == "Windows" else "."}swap-san-server')
+root_path = os.path.join(get_path(), f'{"." if os_name == "Linux" else ""}swap-san-server')
 
 
 def to_bytes(something, encoding="utf8") -> bytes:
