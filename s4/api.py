@@ -261,7 +261,7 @@ def get_swap_list(commons: DBCommons = Depends()) -> JSONResponse:
             "data": {}
         }
     except Exception:
-        all_list = []
+        all_list = {}
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         result = {
             "status": "Failed",
