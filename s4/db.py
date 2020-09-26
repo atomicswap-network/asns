@@ -24,7 +24,7 @@ import os
 
 from dataclasses import dataclass, asdict
 from enum import IntEnum
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Optional
 
 import plyvel
 import pickle
@@ -173,10 +173,10 @@ class TokenDB(DBBase):
         deserialized_value = pickle.loads(value)
         return TokenDBData.from_dict(deserialized_value)
 
-    def verify_token(self, token: str) -> bool:
+    def verify_token(self, token: str) -> Tuple[bool, Optional[int]]:
         raw_token = b58.a2b_base58(token)
         hashed_token = sha256d(raw_token)
-        if self.get(hashed_token):
-            return True
+        if data := self.get(hashed_token):
+            return True, data.date
         else:
-            return False
+            return False, None

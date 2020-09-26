@@ -174,13 +174,14 @@ def get_token(commons: DBCommons = Depends()) -> JSONResponse:
 @api.get("/verify_token/")
 def verify_token(commons: DBCommons = Depends(), token: str = "") -> JSONResponse:
     try:
-        exist = commons.token_db.verify_token(token)
+        exist, create_at = commons.token_db.verify_token(token)
     except Exception:
-        exist = False
+        exist, create_at = False, None
 
     result = {
         "status": "Success",
-        "exist": exist
+        "exist": exist,
+        "create_at": create_at
     }
 
     return JSONResponse(content=jsonable_encoder(result))
