@@ -187,7 +187,7 @@ def verify_token(commons: DBCommons = Depends(), token: str = "") -> JSONRespons
 
 
 @api.post("/register_swap/")
-async def register_token(item: RegisterSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
+async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
     token: str = item.token
 
     status_code = status.HTTP_200_OK
