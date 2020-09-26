@@ -133,7 +133,7 @@ class DBBase:
     def put(self, key: str, value: Union[TxDBData, TokenDBData]) -> None:
         raise NotImplementedError
 
-    def get(self, key: str) -> Union[TxDBData, TokenDBData]:
+    def get(self, key: str) -> Optional[Union[TxDBData, TokenDBData]]:
         raise NotImplementedError
 
 
@@ -146,8 +146,10 @@ class TxDB(DBBase):
         serialized_value = pickle.dumps(value.asdict())
         self.db.put(key, serialized_value)
 
-    def get(self, key: bytes) -> TxDBData:
+    def get(self, key: bytes) -> Optional[TxDBData]:
         value = self.db.get(key)
+        if value is None:
+            return None
         deserialized_value = pickle.loads(value)
         return TxDBData.from_dict(deserialized_value)
 
@@ -168,8 +170,10 @@ class TokenDB(DBBase):
         serialized_value = pickle.dumps(value.asdict())
         self.db.put(key, serialized_value)
 
-    def get(self, key: bytes) -> TokenDBData:
+    def get(self, key: bytes) -> Optional[TokenDBData]:
         value = self.db.get(key)
+        if value is None:
+            return None
         deserialized_value = pickle.loads(value)
         return TokenDBData.from_dict(deserialized_value)
 
