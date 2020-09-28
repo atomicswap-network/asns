@@ -1,5 +1,6 @@
 .idea/
 venv/
 .pytest_cache/
+pythonenv3.8/
 
 *.pyc
