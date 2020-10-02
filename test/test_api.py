@@ -6,20 +6,20 @@ from fastapi.testclient import TestClient
 from fastapi.encoders import jsonable_encoder
 from pycoin.encoding import b58
 
-from s4 import s4_api
-from s4.util import sha256d
+from asns import asns_api
+from asns.util import sha256d
 
 
 class TestAPI(unittest.TestCase):
     def setUp(self):
         super().setUp()
-        self.s4_path = tempfile.mkdtemp()
-        s4_api.db_base_path = self.s4_path
-        self.client = TestClient(s4_api)
+        self.asns_path = tempfile.mkdtemp()
+        asns_api.db_base_path = self.asns_path
+        self.client = TestClient(asns_api)
 
     def tearDown(self):
         super().tearDown()
-        shutil.rmtree(self.s4_path)
+        shutil.rmtree(self.asns_path)
 
     def test_index(self):
         response = self.client.get("/")

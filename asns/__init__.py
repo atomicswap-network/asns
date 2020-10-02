@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
-# -*- mode: python -*-
-#
-# Copyright (c) 2020 The Swapping Support System Developers
+# Copyright (c) 2020 The Atomic Swap Network Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -23,26 +20,5 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import asyncio
-import sys
-import os
-
-from s4 import s4_api, get_path
-
-
-if __name__ == '__main__':
-    argv = sys.argv
-    get_path()
-
-    base_path = None
-    if len(argv) == 2:
-        if argv[1].startswith("--base_path="):
-            base_path = os.path.expanduser(argv[1][12:])
-            if not os.path.isdir(os.path.split(base_path)[0]):
-                raise Exception("The specified folder can't be created.")
-    s4_api.db_base_path = base_path
-    loop = asyncio.get_event_loop()
-    gather = asyncio.gather(
-        s4_api.run()
-    )
-    loop.run_until_complete(gather)
+from .api import API, asns_api
+from .util import get_path
