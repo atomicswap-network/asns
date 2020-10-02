@@ -144,6 +144,30 @@ class DBCommons:
         self.tx_db = TxDB(api.db_base_path)
         self.token_db = TokenDB(api.db_base_path)
 
+    def token_status_msg(self, token: str) -> Optional[str]:
+        is_exist = False
+        is_used = False
+        msg = None
+        try:
+            is_exist, _ = self.token_db.verify_token(token)
+        except Exception:
+            pass
+
+        if is_exist:
+            raw_token = b58.a2b_base58(token)
+            hashed_token = sha256d(raw_token)
+            try:
+                is_used = bool(self.tx_db.get(hashed_token))
+            except Exception:
+                pass
+        else:
+            msg = "Token is not registered or is invalid."
+
+        if is_used:
+            msg = "Token is already used."
+
+        return msg
+
 
 @api.get("/")
 async def server_info() -> JSONResponse:
@@ -200,33 +224,13 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) 
     token = item.token
 
     status_code = status.HTTP_200_OK
-    exist = False
-    used = False
+    msg = commons.token_status_msg(token)
 
-    try:
-        exist, _ = commons.token_db.verify_token(token)
-    except Exception:
-        pass
-
-    if exist:
-        raw_token = b58.a2b_base58(token)
-        hashed_token = sha256d(raw_token)
-        try:
-            used = bool(commons.tx_db.get(hashed_token))
-        except Exception:
-            pass
-
-    if not exist:
+    if msg:
         status_code = status.HTTP_400_BAD_REQUEST
         result = {
             "status": "Failed",
-            "error": "Token is not registered or is invalid."
-        }
-    elif used:
-        status_code = status.HTTP_400_BAD_REQUEST
-        result = {
-            "status": "Failed",
-            "error": "Token is already used."
+            "error": msg
         }
     else:
         want_currency = item.wantCurrency
@@ -246,6 +250,8 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) 
             p_addr=receive_address
         )
         try:
+            raw_token = b58.a2b_base58(token)
+            hashed_token = sha256d(raw_token)
             commons.tx_db.put(hashed_token, data)
             result = {
                 "status": "Success"
@@ -295,39 +301,21 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
     token = item.token
 
     status_code = status.HTTP_200_OK
-    exist = False
-    used = False
+    msg = commons.token_status_msg(token)
 
-    try:
-        exist, _ = commons.token_db.verify_token(token)
-    except Exception:
-        pass
-
-    if exist:
-        raw_token = b58.a2b_base58(token)
-        hashed_token = sha256d(raw_token)
-        try:
-            used = bool(commons.tx_db.get(hashed_token))
-        except Exception:
-            pass
-
-    if not exist:
+    if msg:
         status_code = status.HTTP_400_BAD_REQUEST
         result = {
             "status": "Failed",
-            "error": "Token is not registered or is invalid."
-        }
-    elif used:
-        status_code = status.HTTP_400_BAD_REQUEST
-        result = {
-            "status": "Failed",
-            "error": "Token is already used."
+            "error": msg
         }
     else:
         secret_hash = item.secretHash
         initiate_raw_tx = item.rawTransaction
         receive_address = item.receiveAddress
 
+        raw_token = b58.a2b_base58(token)
+        hashed_token = sha256d(raw_token)
         # TODO: Receive Address Validation
         # TODO: Raw Transaction Validation
 
