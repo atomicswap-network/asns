@@ -1,4 +1,4 @@
-# Copyright (c) 2020 The Swapping Support System Developers
+# Copyright (c) 2020 The Atomic Swap Network Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files

@@ -1,4 +1,4 @@
-# Copyright (c) 2020 The Swapping Support System Developers
+# Copyright (c) 2020 The Atomic Swap Network Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -52,9 +52,9 @@ async def api_spawn(app, **kwargs) -> None:
         sys.exit(1)
 
     if config.should_reload or config.workers > 1:
-        logger = logging.getLogger("s4.error")
+        logger = logging.getLogger("asns.error")
         logger.warn(
-            "S4 not supposed to use 'workers' and 'reload'."
+            "ASNS not supposed to use 'workers' and 'reload'."
         )
         sys.exit(1)
     else:
@@ -84,7 +84,7 @@ class API(FastAPI):
         await self.serve(**kwargs)
 
 
-api = s4_api = API()
+api = asns_api = API()
 
 
 class RegisterSwapItem(BaseModel):

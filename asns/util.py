@@ -1,5 +1,5 @@
 # Copyright (c) 2011-2020 The Electrum Developers
-# Copyright (c) 2020 The Swapping Support System Developers
+# Copyright (c) 2020 The Atomic Swap Network Developers
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -39,12 +39,12 @@ def get_path() -> str:
         path = os.path.expanduser("~/")
     else:
         raise Exception(
-            "Please set database save path by '--base_path' option. (ex. ./run_s4 --base_path=/home/user/s4/)"
+            "Please set database save path by '--base_path' option. (ex. ./run_asns --base_path=/home/user/asns/)"
         )
     return path
 
 
-root_path = os.path.join(get_path(), f'{"." if os_name == "Linux" else ""}swap-san-server')
+root_path = os.path.join(get_path(), f'{"." if os_name == "Linux" else ""}asns')
 
 
 def to_bytes(something, encoding="utf8") -> bytes:
