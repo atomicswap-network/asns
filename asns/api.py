@@ -96,6 +96,14 @@ class RegisterSwapItem(BaseModel):
     receiveAddress: str
 
 
+class InitiateSwapItem(BaseModel):
+    token: str
+    selectedSwap: str
+    rawTransaction: str
+    secretHash: str
+    receiveAddress: str
+
+
 @api.exception_handler(StarletteHTTPException)
 async def http_exception_handler(_: Request, exc: StarletteHTTPException):
     return JSONResponse(
@@ -280,3 +288,49 @@ def get_swap_list(commons: DBCommons = Depends()) -> JSONResponse:
             }
 
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
+
+
+@api.post("/initiate_swap/")
+def initiate_swap(item: InitiateSwapItem, commons: DBcommons = Depends()) -> JSONResponse:
+    token: str = item.token
+
+
+    status_code = status.HTTP_200_OK
+    exist = False
+    used = False
+
+    try:
+        exist = commons.token_db.verify_token(token)
+    except Exception:
+        pass
+
+    if exist:
+        raw_token = b58.a2b_base58(token)
+        hashed_token = sha256d(raw_token)
+        try:
+            used = bool(commons.tx_db.get(hashed_token))
+        except Exception:
+            pass
+
+    if not exist:
+        status_code = status.HTTP_400_BAD_REQUEST
+        result = {
+            "status": "Failed",/
+            "error": "Token is not registered or is invalid."
+        }
+    elif used:
+        status_code = status.HTTP_400_BAD_REQUEST
+        result = {
+            "status": "Failed",
+            "error": "Token is already used."
+        }
+    else:
+        secret_hash = item.secretHash
+        initiate_raw_tx = item.rawTransaction
+        receive_address = item.receiveAddress
+
+        # TODO: Receive Address Validation
+        # TODO: Raw Transacrion Validation
+
+
+
