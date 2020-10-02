@@ -197,7 +197,7 @@ async def verify_token(commons: DBCommons = Depends(), token: str = "") -> JSONR
 
 @api.post("/register_swap/")
 async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
-    token: str = item.token
+    token = item.token
 
     status_code = status.HTTP_200_OK
     exist = False
@@ -292,8 +292,7 @@ async def get_swap_list(commons: DBCommons = Depends()) -> JSONResponse:
 
 @api.post("/initiate_swap/")
 async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
-    token: str = item.token
-
+    token = item.token
 
     status_code = status.HTTP_200_OK
     exist = False
