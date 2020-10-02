@@ -146,7 +146,7 @@ class DBCommons:
 
 
 @api.get("/")
-def server_info() -> JSONResponse:
+async def server_info() -> JSONResponse:
     result = {
         "message": "This server is working."
     }
@@ -155,7 +155,7 @@ def server_info() -> JSONResponse:
 
 
 @api.get("/get_token/")
-def get_token(commons: DBCommons = Depends()) -> JSONResponse:
+async def get_token(commons: DBCommons = Depends()) -> JSONResponse:
     status_code = status.HTTP_200_OK
     raw_token = secrets.token_bytes(64)
     token = b58.b2a_base58(raw_token)
@@ -180,7 +180,7 @@ def get_token(commons: DBCommons = Depends()) -> JSONResponse:
 
 
 @api.get("/verify_token/")
-def verify_token(commons: DBCommons = Depends(), token: str = "") -> JSONResponse:
+async def verify_token(commons: DBCommons = Depends(), token: str = "") -> JSONResponse:
     try:
         exist, create_at = commons.token_db.verify_token(token)
     except Exception:
@@ -261,7 +261,7 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) 
 
 
 @api.get("/get_swap_list/")
-def get_swap_list(commons: DBCommons = Depends()) -> JSONResponse:
+async def get_swap_list(commons: DBCommons = Depends()) -> JSONResponse:
     status_code = status.HTTP_200_OK
     try:
         all_list = commons.tx_db.get_all()
@@ -291,7 +291,7 @@ def get_swap_list(commons: DBCommons = Depends()) -> JSONResponse:
 
 
 @api.post("/initiate_swap/")
-def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
+async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
     token: str = item.token
 
 
