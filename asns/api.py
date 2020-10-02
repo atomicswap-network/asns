@@ -204,7 +204,7 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) 
     used = False
 
     try:
-        exist = commons.token_db.verify_token(token)
+        exist, _ = commons.token_db.verify_token(token)
     except Exception:
         pass
 
@@ -300,7 +300,7 @@ def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) -> JSO
     used = False
 
     try:
-        exist = commons.token_db.verify_token(token)
+        exist, _ = commons.token_db.verify_token(token)
     except Exception:
         pass
 
