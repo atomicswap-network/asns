@@ -291,7 +291,7 @@ def get_swap_list(commons: DBCommons = Depends()) -> JSONResponse:
 
 
 @api.post("/initiate_swap/")
-def initiate_swap(item: InitiateSwapItem, commons: DBcommons = Depends()) -> JSONResponse:
+def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
     token: str = item.token
 
 
@@ -330,7 +330,7 @@ def initiate_swap(item: InitiateSwapItem, commons: DBcommons = Depends()) -> JSO
         receive_address = item.receiveAddress
 
         # TODO: Receive Address Validation
-        # TODO: Raw Transacrion Validation
+        # TODO: Raw Transaction Validation
 
 
 
