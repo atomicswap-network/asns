@@ -315,7 +315,7 @@ def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) -> JSO
     if not exist:
         status_code = status.HTTP_400_BAD_REQUEST
         result = {
-            "status": "Failed",/
+            "status": "Failed",
             "error": "Token is not registered or is invalid."
         }
     elif used:
