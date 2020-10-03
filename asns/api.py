@@ -104,6 +104,10 @@ class InitiateSwapItem(BaseModel):
     receiveAddress: str
 
 
+class TokenItem(BaseModel):
+    token: str
+
+
 @api.exception_handler(StarletteHTTPException)
 async def http_exception_handler(_: Request, exc: StarletteHTTPException):
     return JSONResponse(
@@ -203,8 +207,9 @@ async def get_token(commons: DBCommons = Depends()) -> JSONResponse:
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
 
-@api.get("/verify_token/")
-async def verify_token(commons: DBCommons = Depends(), token: str = "") -> JSONResponse:
+@api.post("/verify_token/")
+async def verify_token(item: TokenItem, commons: DBCommons = Depends()) -> JSONResponse:
+    token = item.token
     try:
         exist, create_at = commons.token_db.verify_token(token)
     except Exception:
