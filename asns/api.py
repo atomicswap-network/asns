@@ -392,4 +392,4 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends()) ->
                 "error": "Swap has not initiated or has already completed."
             }
 
-    return JSONResponse(status_code=status_code, content=result)
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
