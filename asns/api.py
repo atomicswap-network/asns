@@ -88,7 +88,6 @@ class API(FastAPI):
 api = asns_api = API()
 
 
-
 class TokenItem(BaseModel):
     token: str
 
