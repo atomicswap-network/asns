@@ -33,6 +33,12 @@ from pycoin.encoding import b58
 from .util import root_path, sha256d
 
 
+class TokenStatus(IntEnum):
+    NOT_USED = 0
+    INITIATOR = 1
+    PARTICIPATOR = 2
+
+
 class SwapStatus(IntEnum):
     REGISTERED = 0
     INITIATED = 1
