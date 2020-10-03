@@ -43,7 +43,7 @@ class TestAPI(unittest.TestCase):
             pass
         self.assertTrue(encodable)
 
-        true_response = self.client.get(f"/verify_token/?token={token}")
+        true_response = self.client.post("/verify_token/", json={"token": token})
         true_response_json = true_response.json()
         true_exist = true_response_json.get("exist")
         self.assertEqual(true_response.status_code, 200)
@@ -52,7 +52,7 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(true_exist)
 
         false_token = "4esCzx3bbk2UNWLsxinLwGFfUv1zq5N5tUrirCMQWWBWkoxe5yrRYnkqWeqqViDodxSMT252Gif37c7UJp5RLPLy"
-        false_response = self.client.get(f"/verify_token/?token={false_token}")
+        false_response = self.client.post("/verify_token/", json={"token": false_token})
         false_response_json = false_response.json()
         false_exist = false_response_json.get("exist")
         self.assertEqual(false_response.status_code, 200)
