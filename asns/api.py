@@ -104,6 +104,11 @@ class InitiateSwapItem(BaseModel):
     receiveAddress: str
 
 
+class ParticipateSwapItem(BaseModel):
+    token: str
+    rawTransaction: str
+
+
 class TokenItem(BaseModel):
     token: str
 
