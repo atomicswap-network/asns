@@ -249,7 +249,7 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) 
         # TODO: Receive Address Validation
         # TODO: Want/Send Currency Validation
 
-        data = TxDBData(
+        swap_data = TxDBData(
             i_currency=want_currency,
             i_receive_amount=send_amount,
             p_currency=send_currency,
@@ -259,7 +259,7 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) 
         try:
             raw_token = b58.a2b_base58(token)
             hashed_token = sha256d(raw_token)
-            commons.tx_db.put(hashed_token, data)
+            commons.tx_db.put(hashed_token, swap_data)
             result = {
                 "status": "Success"
             }
@@ -310,19 +310,19 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
 
     msg = commons.token_status_msg(token)
     selected_swap_key = None
-    selected_swap = None
+    selected_swap_data = None
 
     if msg is None:
         try:
             selected_swap_key = binascii.a2b_hex(item.selectedSwap)
-            selected_swap = commons.tx_db.get(selected_swap_key)
+            selected_swap_data = commons.tx_db.get(selected_swap_key)
         except Exception:
             pass
 
-    if selected_swap is None:
+    if selected_swap_data is None:
         msg = "Selected swap is not registered or is invalid."
 
-    if selected_swap.swap_status != SwapStatus.REGISTERED:
+    if selected_swap_data.swap_status != SwapStatus.REGISTERED:
         msg = "Selected swap is already in progress or completed."
 
     if msg:
@@ -338,13 +338,13 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
         raw_token = b58.a2b_base58(token)
         hashed_token = sha256d(raw_token)
 
-        selected_swap.swap_status = SwapStatus.INITIATED
-        selected_swap.i_raw_tx = initiate_raw_tx  # TODO: Raw Transaction Validation
-        selected_swap.i_addr = receive_address  # TODO: Receive Address Validation
-        selected_swap.i_token_hash = hashed_token
+        selected_swap_data.swap_status = SwapStatus.INITIATED
+        selected_swap_data.i_raw_tx = initiate_raw_tx  # TODO: Raw Transaction Validation
+        selected_swap_data.i_addr = receive_address  # TODO: Receive Address Validation
+        selected_swap_data.i_token_hash = hashed_token
 
         try:
-            commons.tx_db.put(selected_swap_key, selected_swap)
+            commons.tx_db.put(selected_swap_key, selected_swap_data)
             result = {
                 "status": "Success"
             }
@@ -375,9 +375,9 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends()) ->
         raw_token = b58.a2b_base58(token)
         hashed_token = sha256d(raw_token)
 
-        if SwapStatus.REGISTERED < (data := commons.tx_db.get(hashed_token)).swap_status < SwapStatus.COMPLETED:
-            initiator_address = data.i_addr
-            token_hash = data.i_token_hash
+        if SwapStatus.REGISTERED < (swap_data := commons.tx_db.get(hashed_token)).swap_status < SwapStatus.COMPLETED:
+            initiator_address = swap_data.i_addr
+            token_hash = swap_data.i_token_hash
             result = {
                 "status": "Success",
                 "initiatorAddress": initiator_address,
