@@ -88,8 +88,12 @@ class API(FastAPI):
 api = asns_api = API()
 
 
-class RegisterSwapItem(BaseModel):
+
+class TokenItem(BaseModel):
     token: str
+
+
+class RegisterSwapItem(TokenItem):
     wantCurrency: str
     wantAmount: int
     sendCurrency: str
@@ -97,20 +101,14 @@ class RegisterSwapItem(BaseModel):
     receiveAddress: str
 
 
-class InitiateSwapItem(BaseModel):
-    token: str
+class InitiateSwapItem(TokenItem):
     selectedSwap: str
     rawTransaction: str
     receiveAddress: str
 
 
-class ParticipateSwapItem(BaseModel):
-    token: str
+class ParticipateSwapItem(TokenItem):
     rawTransaction: str
-
-
-class TokenItem(BaseModel):
-    token: str
 
 
 @api.exception_handler(StarletteHTTPException)
