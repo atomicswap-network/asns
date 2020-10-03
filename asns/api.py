@@ -310,6 +310,7 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
     status_code = status.HTTP_200_OK
 
     msg = commons.token_status_msg(token)
+    selected_swap_key = None
     selected_swap = None
 
     if msg is None:
@@ -344,7 +345,7 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
         selected_swap.i_token_hash = hashed_token
 
         try:
-            commons.tx_db.put(hashed_token, selected_swap)
+            commons.tx_db.put(selected_swap_key, selected_swap)
             result = {
                 "status": "Success"
             }
