@@ -25,6 +25,7 @@ import sys
 import os
 import secrets
 import time
+import binascii
 
 from fastapi import FastAPI, Depends, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -34,7 +35,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from uvicorn import Config, Server
 from pycoin.encoding import b58
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Optional
 
 from .db import SwapStatus, TokenDB, TokenDBData, TxDB, TxDBData
 from .util import sha256d
@@ -298,9 +299,23 @@ async def get_swap_list(commons: DBCommons = Depends()) -> JSONResponse:
 @api.post("/initiate_swap/")
 async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
     token = item.token
-
     status_code = status.HTTP_200_OK
+
     msg = commons.token_status_msg(token)
+    selected_swap = None
+
+    if msg is None:
+        try:
+            selected_swap_key = binascii.a2b_hex(item.selectedSwap)
+            selected_swap = commons.tx_db.get(selected_swap_key)
+        except Exception:
+            pass
+
+    if selected_swap is None:
+        msg = "Selected swap is not registered or is invalid."
+
+    if selected_swap.swap_status != SwapStatus.REGISTERED:
+        msg = "Selected swap is already in progress or completed."
 
     if msg:
         status_code = status.HTTP_400_BAD_REQUEST
@@ -314,8 +329,22 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
 
         raw_token = b58.a2b_base58(token)
         hashed_token = sha256d(raw_token)
-        # TODO: Receive Address Validation
-        # TODO: Raw Transaction Validation
 
+        selected_swap.swap_status = SwapStatus.INITIATED
+        selected_swap.i_raw_tx = initiate_raw_tx  # TODO: Raw Transaction Validation
+        selected_swap.i_addr = receive_address  # TODO: Receive Address Validation
+        selected_swap.i_token_hash = hashed_token
 
+        try:
+            commons.tx_db.put(hashed_token, selected_swap)
+            result = {
+                "status": "Success"
+            }
+        except Exception as e:
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            result = {
+                "status": "Failed",
+                "error": str(e)
+            }
 
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
