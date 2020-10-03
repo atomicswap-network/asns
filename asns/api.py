@@ -100,7 +100,6 @@ class InitiateSwapItem(BaseModel):
     token: str
     selectedSwap: str
     rawTransaction: str
-    secretHash: str
     receiveAddress: str
 
 
