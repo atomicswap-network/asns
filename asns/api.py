@@ -353,3 +353,40 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
             }
 
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
+
+
+@api.post("/get_initiator_info/")
+async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends()) -> JSONResponse:
+    token = item.token
+
+    status_code = status.HTTP_200_OK
+    msg = commons.token_status_msg(token)
+
+    if msg:
+        status_code = status.HTTP_400_BAD_REQUEST
+        result = {
+            "status": "Failed",
+            "error": msg
+        }
+    else:
+        raw_token = b58.a2b_base58(token)
+        hashed_token = sha256d(raw_token)
+
+        if SwapStatus.REGISTERED < (data := commons.tx_db.get(hashed_token)).swap_status < SwapStatus.COMPLETED:
+            initiator_address = data.i_addr
+            token_hash = data.i_token_hash
+            result = {
+                "status": "Success",
+                "initiatorAddress": initiator_address,
+                "tokenHash": token_hash
+            }
+        else:
+            status_code = status.HTTP_400_BAD_REQUEST
+            result = {
+                "status": "Failed",
+                "initiatorAddress": None,
+                "tokenHash": None,
+                "error": "Swap has not initiated or has already completed."
+            }
+
+    return JSONResponse(status_code=status_code, content=result)
