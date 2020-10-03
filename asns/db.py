@@ -103,8 +103,8 @@ class TxDBData:
 
 @dataclass
 class TokenDBData:
-    date: int
-    token_status: TokenStatus
+    date: int = None
+    token_status: TokenStatus = TokenStatus.NOT_USED
 
     @classmethod
     def from_dict(cls, dict_data: Dict) -> 'TokenDBData':
