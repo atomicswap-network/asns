@@ -104,6 +104,7 @@ class TxDBData:
 @dataclass
 class TokenDBData:
     date: int
+    token_status: TokenStatus
 
     @classmethod
     def from_dict(cls, dict_data: Dict) -> 'TokenDBData':
@@ -112,12 +113,18 @@ class TokenDBData:
         shaped_dict_data = {}
 
         data_list: List[Tuple[str, type]] = [
-            ("date", int)
+            ("date", int),
+            ("token_status", int)
         ]
 
         for data in data_list:
             one_of_dict_data = dict_data.get(data[0])
             shaped_dict_data[data[0]] = None if not isinstance(one_of_dict_data, data[1]) else one_of_dict_data
+            if one_of_dict_data is not None and data[0] == "token_status":
+                try:
+                    shaped_dict_data[data[0]] = TokenStatus(one_of_dict_data)
+                except ValueError:
+                    pass
 
         return TokenDBData(**shaped_dict_data)
 
