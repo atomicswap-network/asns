@@ -310,7 +310,6 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
             "error": msg
         }
     else:
-        secret_hash = item.secretHash
         initiate_raw_tx = item.rawTransaction
         receive_address = item.receiveAddress
 
