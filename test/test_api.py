@@ -101,7 +101,6 @@ class TestAPI(unittest.TestCase):
         }
         hashed_token_hex = sha256d(raw_token).hex()
 
-
         list_response = self.client.get("/get_swap_list/")
         list_response_json = list_response.json()
         self.assertEqual(list_response.status_code, 200)
