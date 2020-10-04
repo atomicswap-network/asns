@@ -150,18 +150,26 @@ class DBCommons:
         self.tx_db = TxDB(api.db_base_path)
         self.token_db = TokenDB(api.db_base_path)
 
-    def token_status_msg(self, token: str) -> Optional[str]:
+    def token_status_msg(self, token: str, token_status: List[TokenStatus]) -> Optional[str]:
         is_exist = False
         is_used = False
+        equal_status = False
         msg = None
+
+        token_data = None
+
+        raw_token = b58.a2b_base58(token)
+        hashed_token = sha256d(raw_token)
         try:
-            is_exist, _ = self.token_db.verify_token(token)
+            token_data = self.token_db.get(hashed_token)
         except Exception:
             pass
 
+        if token_data is not None:
+            is_exist = True
+
         if is_exist:
-            raw_token = b58.a2b_base58(token)
-            hashed_token = sha256d(raw_token)
+            equal_status = token_data.token_status in token_status
             try:
                 is_used = bool(self.tx_db.get(hashed_token))
             except Exception:
@@ -169,7 +177,9 @@ class DBCommons:
         else:
             msg = "Token is not registered or is invalid."
 
-        if is_used:
+        if equal_status:
+            msg = "Inappropriate token status."
+        elif is_used:
             msg = "Token is already used."
 
         return msg
@@ -243,7 +253,7 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) 
     token = item.token
 
     status_code = status.HTTP_200_OK
-    msg = commons.token_status_msg(token)
+    msg = commons.token_status_msg(token, [TokenStatus.NOT_USED])
 
     if msg:
         status_code = status.HTTP_400_BAD_REQUEST
@@ -326,7 +336,7 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
     token = item.token
     status_code = status.HTTP_200_OK
 
-    msg = commons.token_status_msg(token)
+    msg = commons.token_status_msg(token, [TokenStatus.NOT_USED])
     selected_swap_key = None
     selected_swap_data = None
 
@@ -385,7 +395,7 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends()) ->
     token = item.token
 
     status_code = status.HTTP_200_OK
-    msg = commons.token_status_msg(token)
+    msg = commons.token_status_msg(token, [TokenStatus.INITIATOR, TokenStatus.PARTICIPATOR])
 
     if msg:
         status_code = status.HTTP_400_BAD_REQUEST
@@ -422,7 +432,7 @@ async def participate_swap(item: ParticipateSwapItem, commons: DBCommons = Depen
     token = item.token
 
     status_code = status.HTTP_200_OK
-    msg = commons.token_status_msg(token)
+    msg = commons.token_status_msg(token, [TokenStatus.PARTICIPATOR])
 
     raw_token = b58.a2b_base58(token)
     hashed_token = sha256d(raw_token)
