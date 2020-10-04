@@ -37,7 +37,7 @@ from uvicorn import Config, Server
 from pycoin.encoding import b58
 from typing import Dict, Union, List, Optional
 
-from .db import SwapStatus, TokenDB, TokenDBData, TxDB, TxDBData
+from .db import SwapStatus, TokenStatus, TokenDB, TokenDBData, TxDB, TxDBData
 from .util import sha256d
 
 
@@ -174,6 +174,18 @@ class DBCommons:
 
         return msg
 
+    def change_token_status(self, hashed_token: bytes, token_status: TokenStatus) -> Optional[str]:
+        err = None
+
+        try:
+            token_data = self.token_db.get(hashed_token)
+            token_data.token_status = token_status
+            self.token_db.put(hashed_token, token_data)
+        except Exception as e:
+            err = str(e)
+
+        return err
+
 
 @api.get("/")
 async def server_info() -> JSONResponse:
@@ -256,9 +268,15 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) 
             p_receive_amount=want_amount,
             p_addr=receive_address
         )
+
+        raw_token = b58.a2b_base58(token)
+        hashed_token = sha256d(raw_token)
+
+        err = commons.change_token_status(hashed_token, TokenStatus.PARTICIPATOR)
+
         try:
-            raw_token = b58.a2b_base58(token)
-            hashed_token = sha256d(raw_token)
+            if err:
+                raise Exception(err)
             commons.tx_db.put(hashed_token, swap_data)
             result = {
                 "status": "Success"
@@ -343,7 +361,11 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
         selected_swap_data.i_addr = receive_address  # TODO: Receive Address Validation
         selected_swap_data.i_token_hash = hashed_token
 
+        err = commons.change_token_status(hashed_token, TokenStatus.INITIATOR)
+
         try:
+            if err:
+                raise Exception(err)
             commons.tx_db.put(selected_swap_key, selected_swap_data)
             result = {
                 "status": "Success"
