@@ -286,12 +286,15 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) 
 
         try:
             if err:
-                raise Exception(err)
+                raise Exception(f"Failed to update token status: {err}")
             commons.tx_db.put(hashed_token, swap_data)
             result = {
                 "status": "Success"
             }
         except Exception as e:
+            if err is None:
+                e = f"Failed to register swap data: {str(e)}"
+
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
             result = {
                 "status": "Failed",
@@ -375,12 +378,14 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
 
         try:
             if err:
-                raise Exception(err)
+                raise Exception(f"Failed to update token status: {err}")
             commons.tx_db.put(selected_swap_key, selected_swap_data)
             result = {
                 "status": "Success"
             }
         except Exception as e:
+            if err is None:
+                e = f"Failed to update swap data: {str(e)}"
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
             result = {
                 "status": "Failed",
@@ -473,7 +478,7 @@ async def participate_swap(item: ParticipateSwapItem, commons: DBCommons = Depen
             status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
             result = {
                 "status": "Failed",
-                "error": str(e)
+                "error": f"Failed to update swap data: {str(e)}"
             }
 
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
