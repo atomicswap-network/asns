@@ -169,7 +169,7 @@ class DBCommons:
             is_exist = True
 
         if is_exist:
-            equal_status = token_data.token_status in token_status
+            equal_status = token_data.token_status not in token_status
             try:
                 is_used = bool(self.tx_db.get(hashed_token))
             except Exception:
