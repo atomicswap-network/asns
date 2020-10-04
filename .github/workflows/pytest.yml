@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - develop
+      - 'feature/**'
   pull_request:
     branches:
       - develop
