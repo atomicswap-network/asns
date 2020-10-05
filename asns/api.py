@@ -484,7 +484,7 @@ async def participate_swap(item: ParticipateSwapItem, commons: DBCommons = Depen
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
 
-@api.get("/get_swap_status/{token_hash}")
+@api.get("/get_swap_status/{token_hash}/")
 async def get_swap_status(token_hash: str, commons: DBCommons = Depends()) -> JSONResponse:
     status_code = status.HTTP_200_OK
 
