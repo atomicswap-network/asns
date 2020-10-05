@@ -483,3 +483,30 @@ async def participate_swap(item: ParticipateSwapItem, commons: DBCommons = Depen
 
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
+
+@api.get("/get_swap_status/{token_hash}")
+async def get_swap_status(token_hash: str, commons: DBCommons = Depends()) -> JSONResponse:
+    status_code = status.HTTP_200_OK
+
+    swap_data = None
+    try:
+        swap_key = binascii.a2b_hex(token_hash)
+        swap_data = commons.tx_db.get(swap_key)
+    except Exception:
+        pass
+
+    if swap_data is None:
+        status_code = status.HTTP_400_BAD_REQUEST
+        result = {
+            "status": "Failed",
+            "swapStatus": None,
+            "error": "Swap is not registered or is invalid."
+        }
+    else:
+        result = {
+            "status": "Success",
+            "swapStatus": swap_data.swap_status.name
+        }
+
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
+
