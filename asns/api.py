@@ -110,6 +110,11 @@ class ParticipateSwapItem(TokenItem):
     rawTransaction: str
 
 
+class RedeemSwapItem(TokenItem):
+    selectedSwap: str
+    rawTransaction: str
+
+
 @api.exception_handler(StarletteHTTPException)
 async def http_exception_handler(_: Request, exc: StarletteHTTPException):
     return JSONResponse(
@@ -507,6 +512,55 @@ async def get_swap_status(token_hash: str, commons: DBCommons = Depends()) -> JS
             "status": "Success",
             "swapStatus": swap_data.swap_status.name
         }
+
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
+
+
+@api.post("/redeem_swap/")
+async def redeem_swap(item: RedeemSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
+    token = item.token
+    status_code = status.HTTP_200_OK
+
+    msg = commons.token_status_msg(token, [TokenStatus.INITIATOR])
+    selected_swap_key = None
+    selected_swap_data = None
+
+    if msg is None:
+        try:
+            selected_swap_key = binascii.a2b_hex(item.selectedSwap)
+            selected_swap_data = commons.tx_db.get(selected_swap_key)
+        except Exception:
+            pass
+
+    if selected_swap_data is None:
+        msg = "Selected swap is not registered or is invalid."
+
+    if selected_swap_data.swap_status != SwapStatus.PARTICIPATED:
+        msg = "Selected swap is already in progress or completed."
+
+    if msg:
+        status_code = status.HTTP_400_BAD_REQUEST
+        result = {
+            "status": "Failed",
+            "error": msg
+        }
+    else:
+        redeem_raw_tx = item.rawTransaction
+
+        selected_swap_data.swap_status = SwapStatus.REDEEMED
+        selected_swap_data.i_redeem_raw_tx = redeem_raw_tx  # TODO: Raw Transaction Validation
+
+        try:
+            commons.tx_db.put(selected_swap_key, selected_swap_data)
+            result = {
+                "status": "Success"
+            }
+        except Exception as e:
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            result = {
+                "status": "Failed",
+                "error": f"Failed to update swap data: {str(e)}"
+            }
 
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
