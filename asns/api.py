@@ -423,7 +423,7 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends()) ->
             result = {
                 "status": "Success",
                 "initiatorAddress": initiator_address,
-                "tokenHash": token_hash
+                "tokenHash": token_hash.hex()
             }
         else:
             status_code = status.HTTP_400_BAD_REQUEST
