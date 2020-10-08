@@ -35,9 +35,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from uvicorn import Config, Server
 from pycoin.encoding import b58
+from pycoin.vm.ScriptTools import ScriptTools
 from typing import Dict, Union, List, Optional
 
 from .db import SwapStatus, TokenStatus, TokenDB, TokenDBData, TxDB, TxDBData
+from .tx import BitcoinTx
 from .util import sha256d
 
 
@@ -560,6 +562,67 @@ async def redeem_swap(item: RedeemSwapItem, commons: DBCommons = Depends()) -> J
             result = {
                 "status": "Failed",
                 "error": f"Failed to update swap data: {str(e)}"
+            }
+
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
+
+
+@api.post("/get_redeem_token/")
+async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends()) -> JSONResponse:
+    token = item.token
+    status_code = status.HTTP_200_OK
+
+    msg = commons.token_status_msg(token, [TokenStatus.PARTICIPATOR])
+
+    raw_token = b58.a2b_base58(token)
+    hashed_token = sha256d(raw_token)
+
+    swap_data = None
+
+    if msg is None:
+        try:
+            swap_key = binascii.a2b_hex(hashed_token)
+            swap_data = commons.tx_db.get(swap_key)
+        except Exception:
+            pass
+
+    if swap_data is None:
+        msg = "Token Hash doesn't have swap transaction."
+
+    if swap_data.swap_status != SwapStatus.REDEEMED:
+        msg = "Selected swap is already in progress or completed."
+
+    if msg:
+        status_code = status.HTTP_400_BAD_REQUEST
+        result = {
+            "status": "Failed",
+            "error": msg
+        }
+    else:
+        redeem_raw_tx: BitcoinTx = BitcoinTx.from_hex(swap_data.i_redeem_raw_tx)
+        txs_in: List[BitcoinTx.TxIn] = redeem_raw_tx.txs_in
+        token = None
+        for tx_in in txs_in:
+            parsed_script: List[str] = ScriptTools.opcode_list(tx_in.script)
+            for data in parsed_script:
+                if data[0] == "[" and data[-1] == "]":
+                    pushed_data = binascii.a2b_hex(data[1:-1])
+                    hashed_data = sha256d(pushed_data)
+                    if swap_data.i_token_hash == hashed_data:
+                        token = pushed_data
+                        break
+                else:
+                    continue
+        if token is None:
+            status_code = status.HTTP_400_BAD_REQUEST
+            result = {
+                "status": "Failed",
+                "error": "A fatal error has occurred."
+            }
+        else:
+            result = {
+                "status": "Success",
+                "token": token.hex()
             }
 
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
