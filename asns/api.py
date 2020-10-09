@@ -278,7 +278,6 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) 
     msg = commons.token_status_msg(token, [TokenStatus.NOT_USED])
 
     if msg:
-        status_code = status.HTTP_400_BAD_REQUEST
         result = {
             "status": "Failed",
             "error": msg
@@ -307,8 +306,9 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) 
         err = commons.change_token_status(hashed_token, TokenStatus.PARTICIPATOR)
 
         result = commons.update_swap(hashed_token, swap_data, err)
-        if result.get("error") is not None:
-            status_code = status.HTTP_400_BAD_REQUEST
+
+    if result.get("error") is not None:
+        status_code = status.HTTP_400_BAD_REQUEST
 
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
