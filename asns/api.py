@@ -451,8 +451,7 @@ async def participate_swap(item: TokenAndTxItem, commons: DBCommons = Depends())
 
     if msg is None:
         try:
-            swap_key = binascii.a2b_hex(hashed_token)
-            swap_data = commons.tx_db.get(swap_key)
+            swap_data = commons.tx_db.get(hashed_token)
         except Exception:
             pass
 
@@ -579,8 +578,7 @@ async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends()) -> J
 
     if msg is None:
         try:
-            swap_key = binascii.a2b_hex(hashed_token)
-            swap_data = commons.tx_db.get(swap_key)
+            swap_data = commons.tx_db.get(hashed_token)
         except Exception:
             pass
 
@@ -640,8 +638,7 @@ async def complete_swap(item: TokenAndTxItem, commons: DBCommons = Depends()) ->
 
     if msg is None:
         try:
-            swap_key = binascii.a2b_hex(hashed_token)
-            swap_data = commons.tx_db.get(swap_key)
+            swap_data = commons.tx_db.get(hashed_token)
         except Exception:
             pass
 
@@ -664,7 +661,7 @@ async def complete_swap(item: TokenAndTxItem, commons: DBCommons = Depends()) ->
         swap_data.p_redeem_raw_tx = redeem_raw_tx  # TODO: Raw Transaction Validation
 
         try:
-            commons.tx_db.put(swap_key, swap_data)
+            commons.tx_db.put(hashed_token, swap_data)
             result = {
                 "status": "Success"
             }
