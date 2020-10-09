@@ -53,7 +53,7 @@ class TxDBData:
     i_currency: str = None  # TODO: Make Currency Dataclass
     i_receive_amount: int = None
     i_addr: str = None
-    i_token_hash: str = None
+    i_token_hash: bytes = None
     i_raw_tx: str = None
     i_redeem_raw_tx: str = None
     p_currency: str = None  # TODO: Make Currency Dataclass
@@ -73,7 +73,7 @@ class TxDBData:
             ("i_currency", str),
             ("i_receive_amount", int),
             ("i_addr", str),
-            ("i_token_hash", str),
+            ("i_token_hash", bytes),
             ("i_raw_tx", str),
             ("i_redeem_raw_tx", str),
             ("p_currency", str),
