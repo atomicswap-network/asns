@@ -93,8 +93,10 @@ api = asns_api = API()
 class TokenItem(BaseModel):
     token: str
 
+
 class TokenAndTxItem(TokenItem):
     rawTransaction: str
+
 
 class RegisterSwapItem(TokenItem):
     wantCurrency: str
@@ -103,12 +105,15 @@ class RegisterSwapItem(TokenItem):
     sendAmount: int
     receiveAddress: str
 
+
 class InitiateSwapItem(TokenAndTxItem):
     selectedSwap: str
     receiveAddress: str
 
+
 class RedeemSwapItem(TokenAndTxItem):
     selectedSwap: str
+
 
 @api.exception_handler(StarletteHTTPException)
 async def http_exception_handler(_: Request, exc: StarletteHTTPException):
