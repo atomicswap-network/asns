@@ -620,3 +620,55 @@ async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends()) -> J
 
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
+
+@api.post("/complete_swap/")
+async def complete_swap(item: TokenAndTxItem, commons: DBCommons = Depends()) -> JSONResponse:
+    token = item.token
+    status_code = status.HTTP_200_OK
+
+    msg = commons.token_status_msg(token, [TokenStatus.PARTICIPATOR])
+
+    raw_token = b58.a2b_base58(token)
+    hashed_token = sha256d(raw_token)
+
+    swap_data = None
+
+    if msg is None:
+        try:
+            swap_key = binascii.a2b_hex(hashed_token)
+            swap_data = commons.tx_db.get(swap_key)
+        except Exception:
+            pass
+
+    if swap_data is None:
+        msg = "Token Hash doesn't have swap transaction."
+
+    if swap_data.swap_status != SwapStatus.REDEEMED:
+        msg = "Selected swap is already in progress or completed."
+
+    if msg:
+        status_code = status.HTTP_400_BAD_REQUEST
+        result = {
+            "status": "Failed",
+            "error": msg
+        }
+    else:
+        redeem_raw_tx = item.rawTransaction
+
+        swap_data.swap_status = SwapStatus.COMPLETED
+        swap_data.p_redeem_raw_tx = redeem_raw_tx  # TODO: Raw Transaction Validation
+
+        try:
+            commons.tx_db.put(swap_key, swap_data)
+            result = {
+                "status": "Success"
+            }
+        except Exception as e:
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+            result = {
+                "status": "Failed",
+                "error": f"Failed to update swap data: {str(e)}"
+            }
+
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
+
