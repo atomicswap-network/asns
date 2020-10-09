@@ -93,6 +93,8 @@ api = asns_api = API()
 class TokenItem(BaseModel):
     token: str
 
+class TokenAndTxItem(TokenItem):
+    rawTransaction: str
 
 class RegisterSwapItem(TokenItem):
     wantCurrency: str
@@ -101,21 +103,12 @@ class RegisterSwapItem(TokenItem):
     sendAmount: int
     receiveAddress: str
 
-
-class InitiateSwapItem(TokenItem):
+class InitiateSwapItem(TokenAndTxItem):
     selectedSwap: str
-    rawTransaction: str
     receiveAddress: str
 
-
-class ParticipateSwapItem(TokenItem):
-    rawTransaction: str
-
-
-class RedeemSwapItem(TokenItem):
+class RedeemSwapItem(TokenAndTxItem):
     selectedSwap: str
-    rawTransaction: str
-
 
 @api.exception_handler(StarletteHTTPException)
 async def http_exception_handler(_: Request, exc: StarletteHTTPException):
@@ -440,7 +433,7 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends()) ->
 
 
 @api.post("/participate_swap/")
-async def participate_swap(item: ParticipateSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
+async def participate_swap(item: TokenAndTxItem, commons: DBCommons = Depends()) -> JSONResponse:
     token = item.token
 
     status_code = status.HTTP_200_OK
