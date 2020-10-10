@@ -36,9 +36,9 @@ from pydantic import BaseModel
 from uvicorn import Config, Server
 from pycoin.encoding import b58
 from pycoin.vm.ScriptTools import ScriptTools
-from typing import Dict, Union, List, Tuple, Optional
+from typing import Dict, Union, List
 
-from .db import SwapStatus, TokenStatus, TokenDB, TokenDBData, TxDB, TxDBData
+from .db import SwapStatus, TokenStatus, TokenDBData, TxDBData, DBCommons
 from .tx import BitcoinTx
 from .util import sha256d
 
@@ -88,6 +88,10 @@ class API(FastAPI):
 
 
 api = asns_api = API()
+
+
+async def db_commons():
+    return DBCommons(api.db_base_path)
 
 
 class TokenItem(BaseModel):
@@ -150,108 +154,6 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError):
     )
 
 
-class DBCommons:
-    def __init__(self) -> None:
-        self.tx_db = TxDB(api.db_base_path)
-        self.token_db = TokenDB(api.db_base_path)
-
-    def token_status_msg(self, token: str, token_status: List[TokenStatus]) -> Optional[str]:
-        is_exist = False
-        is_used = False
-        equal_status = False
-        msg = None
-
-        token_data = None
-
-        raw_token = b58.a2b_base58(token)
-        hashed_token = sha256d(raw_token)
-        try:
-            token_data = self.token_db.get(hashed_token)
-        except Exception:
-            pass
-
-        if token_data is not None:
-            is_exist = True
-
-        if is_exist:
-            equal_status = token_data.token_status not in token_status
-            try:
-                is_used = bool(self.tx_db.get(hashed_token))
-            except Exception:
-                pass
-        else:
-            msg = "Token is not registered or is invalid."
-
-        if equal_status:
-            msg = "Inappropriate token status."
-        elif is_used:
-            msg = "Token is already used."
-
-        return msg
-
-    def change_token_status(self, hashed_token: bytes, token_status: TokenStatus) -> Optional[str]:
-        err = None
-
-        try:
-            token_data = self.token_db.get(hashed_token)
-            token_data.token_status = token_status
-            self.token_db.put(hashed_token, token_data)
-        except Exception as e:
-            err = str(e)
-
-        return err
-
-    def update_swap(self, hashed_token: bytes, swap_data: TxDBData, err: str = None) -> Dict:
-        try:
-            if err:
-                raise Exception(f"Failed to update token status: {err}")
-            self.tx_db.put(hashed_token, swap_data)
-            result = {
-                "status": "Success"
-            }
-        except Exception as e:
-            if err is None:
-                e = f"Failed to update swap data: {str(e)}"
-            result = {
-                "status": "Failed",
-                "error": str(e)
-            }
-        return result
-
-    def verify_token_and_get_swap_data(
-            self,
-            token: str,
-            token_statuses: List[TokenStatus],
-            swap_status: SwapStatus,
-            selected_swap_key: bytes = None
-    ) -> Tuple[Optional[Dict], bytes, Optional[TxDBData]]:
-        msg = self.token_status_msg(token, token_statuses)
-        selected_swap_data = None
-
-        if selected_swap_key is None:
-            raw_token = b58.a2b_base58(token)
-            selected_swap_key = sha256d(raw_token)
-
-        if msg is None:
-            try:
-                selected_swap_data = self.tx_db.get(selected_swap_key)
-            except Exception:
-                pass
-
-        if selected_swap_data is None:
-            msg = "Selected swap is not registered or is invalid."
-
-        if selected_swap_data.swap_status != swap_status:
-            msg = "Selected swap is already in progress or completed."
-
-        result = {
-            "status": "Failed",
-            "error": msg
-        } if msg is not None else None
-
-        return result, selected_swap_key, selected_swap_data
-
-
 @api.get("/")
 async def server_info() -> JSONResponse:
     result = {
@@ -262,7 +164,7 @@ async def server_info() -> JSONResponse:
 
 
 @api.get("/get_token/")
-async def get_token(commons: DBCommons = Depends()) -> JSONResponse:
+async def get_token(commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     status_code = status.HTTP_200_OK
     raw_token = secrets.token_bytes(64)
     token = b58.b2a_base58(raw_token)
@@ -287,7 +189,7 @@ async def get_token(commons: DBCommons = Depends()) -> JSONResponse:
 
 
 @api.post("/verify_token/")
-async def verify_token(item: TokenItem, commons: DBCommons = Depends()) -> JSONResponse:
+async def verify_token(item: TokenItem, commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     token = item.token
     try:
         exist, create_at = commons.token_db.verify_token(token)
@@ -304,7 +206,7 @@ async def verify_token(item: TokenItem, commons: DBCommons = Depends()) -> JSONR
 
 
 @api.post("/register_swap/")
-async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
+async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     token = item.token
 
     status_code = status.HTTP_200_OK
@@ -347,7 +249,7 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends()) 
 
 
 @api.get("/get_swap_list/")
-async def get_swap_list(commons: DBCommons = Depends()) -> JSONResponse:
+async def get_swap_list(commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     status_code = status.HTTP_200_OK
     try:
         all_list = commons.tx_db.get_all()
@@ -377,7 +279,7 @@ async def get_swap_list(commons: DBCommons = Depends()) -> JSONResponse:
 
 
 @api.post("/initiate_swap/")
-async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
+async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     token = item.token
     status_code = status.HTTP_200_OK
 
@@ -412,7 +314,7 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
 
 
 @api.post("/get_initiator_info/")
-async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends()) -> JSONResponse:
+async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     token = item.token
 
     status_code = status.HTTP_200_OK
@@ -450,7 +352,7 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends()) ->
 
 
 @api.post("/participate_swap/")
-async def participate_swap(item: TokenAndTxItem, commons: DBCommons = Depends()) -> JSONResponse:
+async def participate_swap(item: TokenAndTxItem, commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     token = item.token
     status_code = status.HTTP_200_OK
 
@@ -475,7 +377,7 @@ async def participate_swap(item: TokenAndTxItem, commons: DBCommons = Depends())
 
 
 @api.get("/get_swap_status/{token_hash}/")
-async def get_swap_status(token_hash: str, commons: DBCommons = Depends()) -> JSONResponse:
+async def get_swap_status(token_hash: str, commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     status_code = status.HTTP_200_OK
 
     swap_data = None
@@ -502,7 +404,7 @@ async def get_swap_status(token_hash: str, commons: DBCommons = Depends()) -> JS
 
 
 @api.post("/redeem_swap/")
-async def redeem_swap(item: RedeemSwapItem, commons: DBCommons = Depends()) -> JSONResponse:
+async def redeem_swap(item: RedeemSwapItem, commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     token = item.token
     status_code = status.HTTP_200_OK
 
@@ -529,7 +431,7 @@ async def redeem_swap(item: RedeemSwapItem, commons: DBCommons = Depends()) -> J
 
 
 @api.post("/get_redeem_token/")
-async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends()) -> JSONResponse:
+async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     token = item.token
     status_code = status.HTTP_200_OK
 
@@ -572,7 +474,7 @@ async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends()) -> J
 
 
 @api.post("/complete_swap/")
-async def complete_swap(item: TokenAndTxItem, commons: DBCommons = Depends()) -> JSONResponse:
+async def complete_swap(item: TokenAndTxItem, commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     token = item.token
     status_code = status.HTTP_200_OK
 

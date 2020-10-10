@@ -193,3 +193,106 @@ class TokenDB(DBBase):
             return True, data.date
         else:
             return False, None
+
+
+class DBCommons:
+    def __init__(self, db_base_path: str) -> None:
+        self.tx_db = TxDB(db_base_path)
+        self.token_db = TokenDB(db_base_path)
+
+    def token_status_msg(self, token: str, token_status: List[TokenStatus]) -> Optional[str]:
+        is_exist = False
+        is_used = False
+        equal_status = False
+        msg = None
+
+        token_data = None
+
+        raw_token = b58.a2b_base58(token)
+        hashed_token = sha256d(raw_token)
+        try:
+            token_data = self.token_db.get(hashed_token)
+        except Exception:
+            pass
+
+        if token_data is not None:
+            is_exist = True
+
+        if is_exist:
+            equal_status = token_data.token_status not in token_status
+            try:
+                is_used = bool(self.tx_db.get(hashed_token))
+            except Exception:
+                pass
+        else:
+            msg = "Token is not registered or is invalid."
+
+        if equal_status:
+            msg = "Inappropriate token status."
+        elif is_used:
+            msg = "Token is already used."
+
+        return msg
+
+    def change_token_status(self, hashed_token: bytes, token_status: TokenStatus) -> Optional[str]:
+        err = None
+
+        try:
+            token_data = self.token_db.get(hashed_token)
+            token_data.token_status = token_status
+            self.token_db.put(hashed_token, token_data)
+        except Exception as e:
+            err = str(e)
+
+        return err
+
+    def update_swap(self, hashed_token: bytes, swap_data: TxDBData, err: str = None) -> Dict:
+        try:
+            if err:
+                raise Exception(f"Failed to update token status: {err}")
+            self.tx_db.put(hashed_token, swap_data)
+            result = {
+                "status": "Success"
+            }
+        except Exception as e:
+            if err is None:
+                e = f"Failed to update swap data: {str(e)}"
+            result = {
+                "status": "Failed",
+                "error": str(e)
+            }
+        return result
+
+    def verify_token_and_get_swap_data(
+            self,
+            token: str,
+            token_statuses: List[TokenStatus],
+            swap_status: SwapStatus,
+            selected_swap_key: bytes = None
+    ) -> Tuple[Optional[Dict], bytes, Optional[TxDBData]]:
+        msg = self.token_status_msg(token, token_statuses)
+        selected_swap_data = None
+
+        if selected_swap_key is None:
+            raw_token = b58.a2b_base58(token)
+            selected_swap_key = sha256d(raw_token)
+
+        if msg is None:
+            try:
+                selected_swap_data = self.tx_db.get(selected_swap_key)
+            except Exception:
+                pass
+
+        if selected_swap_data is None:
+            msg = "Selected swap is not registered or is invalid."
+
+        if selected_swap_data.swap_status != swap_status:
+            msg = "Selected swap is already in progress or completed."
+
+        result = {
+            "status": "Failed",
+            "error": msg
+        } if msg is not None else None
+
+        return result, selected_swap_key, selected_swap_data
+
