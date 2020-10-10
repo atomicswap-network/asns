@@ -36,7 +36,7 @@ from pydantic import BaseModel
 from uvicorn import Config, Server
 from pycoin.encoding import b58
 from pycoin.vm.ScriptTools import ScriptTools
-from typing import Dict, Union, List, Optional
+from typing import Dict, Union, List, Tuple, Optional
 
 from .db import SwapStatus, TokenStatus, TokenDB, TokenDBData, TxDB, TxDBData
 from .tx import BitcoinTx
@@ -218,6 +218,39 @@ class DBCommons:
             }
         return result
 
+    def verify_token_and_get_swap_data(
+            self,
+            token: str,
+            token_statuses: List[TokenStatus],
+            swap_status: SwapStatus,
+            selected_swap_key: bytes = None
+    ) -> Tuple[Optional[Dict], bytes, Optional[TxDBData]]:
+        msg = self.token_status_msg(token, token_statuses)
+        selected_swap_data = None
+
+        if selected_swap_key is None:
+            raw_token = b58.a2b_base58(token)
+            selected_swap_key = sha256d(raw_token)
+
+        if msg is None:
+            try:
+                selected_swap_data = self.tx_db.get(selected_swap_key)
+            except Exception:
+                pass
+
+        if selected_swap_data is None:
+            msg = "Selected swap is not registered or is invalid."
+
+        if selected_swap_data.swap_status != swap_status:
+            msg = "Selected swap is already in progress or completed."
+
+        result = {
+            "status": "Failed",
+            "error": msg
+        } if msg is not None else None
+
+        return result, selected_swap_key, selected_swap_data
+
 
 @api.get("/")
 async def server_info() -> JSONResponse:
@@ -348,29 +381,15 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends()) 
     token = item.token
     status_code = status.HTTP_200_OK
 
-    msg = commons.token_status_msg(token, [TokenStatus.NOT_USED])
-    selected_swap_key = None
-    selected_swap_data = None
+    selected_swap_key = binascii.a2b_hex(item.selectedSwap)
+    result, _, selected_swap_data = commons.verify_token_and_get_swap_data(
+        token,
+        [TokenStatus.NOT_USED],
+        SwapStatus.REGISTERED,
+        selected_swap_key
+    )
 
-    if msg is None:
-        try:
-            selected_swap_key = binascii.a2b_hex(item.selectedSwap)
-            selected_swap_data = commons.tx_db.get(selected_swap_key)
-        except Exception:
-            pass
-
-    if selected_swap_data is None:
-        msg = "Selected swap is not registered or is invalid."
-
-    if selected_swap_data.swap_status != SwapStatus.REGISTERED:
-        msg = "Selected swap is already in progress or completed."
-
-    if msg:
-        result = {
-            "status": "Failed",
-            "error": msg
-        }
-    else:
+    if result is None:
         initiate_raw_tx = item.rawTransaction
         receive_address = item.receiveAddress
 
@@ -433,33 +452,15 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends()) ->
 @api.post("/participate_swap/")
 async def participate_swap(item: TokenAndTxItem, commons: DBCommons = Depends()) -> JSONResponse:
     token = item.token
-
     status_code = status.HTTP_200_OK
-    msg = commons.token_status_msg(token, [TokenStatus.PARTICIPATOR])
 
-    raw_token = b58.a2b_base58(token)
-    hashed_token = sha256d(raw_token)
+    result, hashed_token, swap_data = commons.verify_token_and_get_swap_data(
+        token,
+        [TokenStatus.PARTICIPATOR],
+        SwapStatus.INITIATED
+    )
 
-    swap_data = None
-
-    if msg is None:
-        try:
-            swap_data = commons.tx_db.get(hashed_token)
-        except Exception:
-            pass
-
-    if swap_data is None:
-        msg = "Token Hash doesn't have swap transaction."
-
-    if swap_data.swap_status != SwapStatus.INITIATED:
-        msg = "Selected swap is already in progress or completed."
-
-    if msg:
-        result = {
-            "status": "Failed",
-            "error": msg
-        }
-    else:
+    if result is None:
         participate_raw_tx = item.rawTransaction
 
         swap_data.swap_status = SwapStatus.PARTICIPATED
@@ -505,29 +506,15 @@ async def redeem_swap(item: RedeemSwapItem, commons: DBCommons = Depends()) -> J
     token = item.token
     status_code = status.HTTP_200_OK
 
-    msg = commons.token_status_msg(token, [TokenStatus.INITIATOR])
-    selected_swap_key = None
-    selected_swap_data = None
+    selected_swap_key = binascii.a2b_hex(item.selectedSwap)
+    result, _, selected_swap_data = commons.verify_token_and_get_swap_data(
+        token,
+        [TokenStatus.INITIATOR],
+        SwapStatus.PARTICIPATED,
+        selected_swap_key
+    )
 
-    if msg is None:
-        try:
-            selected_swap_key = binascii.a2b_hex(item.selectedSwap)
-            selected_swap_data = commons.tx_db.get(selected_swap_key)
-        except Exception:
-            pass
-
-    if selected_swap_data is None:
-        msg = "Selected swap is not registered or is invalid."
-
-    if selected_swap_data.swap_status != SwapStatus.PARTICIPATED:
-        msg = "Selected swap is already in progress or completed."
-
-    if msg:
-        result = {
-            "status": "Failed",
-            "error": msg
-        }
-    else:
+    if result is None:
         redeem_raw_tx = item.rawTransaction
 
         selected_swap_data.swap_status = SwapStatus.REDEEMED
@@ -546,31 +533,13 @@ async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends()) -> J
     token = item.token
     status_code = status.HTTP_200_OK
 
-    msg = commons.token_status_msg(token, [TokenStatus.PARTICIPATOR])
+    result, hashed_token, swap_data = commons.verify_token_and_get_swap_data(
+        token,
+        [TokenStatus.PARTICIPATOR],
+        SwapStatus.REDEEMED
+    )
 
-    raw_token = b58.a2b_base58(token)
-    hashed_token = sha256d(raw_token)
-
-    swap_data = None
-
-    if msg is None:
-        try:
-            swap_data = commons.tx_db.get(hashed_token)
-        except Exception:
-            pass
-
-    if swap_data is None:
-        msg = "Token Hash doesn't have swap transaction."
-
-    if swap_data.swap_status != SwapStatus.REDEEMED:
-        msg = "Selected swap is already in progress or completed."
-
-    if msg:
-        result = {
-            "status": "Failed",
-            "error": msg
-        }
-    else:
+    if result is None:
         redeem_raw_tx: BitcoinTx = BitcoinTx.from_hex(swap_data.i_redeem_raw_tx)
         txs_in: List[BitcoinTx.TxIn] = redeem_raw_tx.txs_in
         token = None
@@ -607,31 +576,13 @@ async def complete_swap(item: TokenAndTxItem, commons: DBCommons = Depends()) ->
     token = item.token
     status_code = status.HTTP_200_OK
 
-    msg = commons.token_status_msg(token, [TokenStatus.PARTICIPATOR])
+    result, hashed_token, swap_data = commons.verify_token_and_get_swap_data(
+        token,
+        [TokenStatus.PARTICIPATOR],
+        SwapStatus.REDEEMED
+    )
 
-    raw_token = b58.a2b_base58(token)
-    hashed_token = sha256d(raw_token)
-
-    swap_data = None
-
-    if msg is None:
-        try:
-            swap_data = commons.tx_db.get(hashed_token)
-        except Exception:
-            pass
-
-    if swap_data is None:
-        msg = "Token Hash doesn't have swap transaction."
-
-    if swap_data.swap_status != SwapStatus.REDEEMED:
-        msg = "Selected swap is already in progress or completed."
-
-    if msg:
-        result = {
-            "status": "Failed",
-            "error": msg
-        }
-    else:
+    if result is None:
         redeem_raw_tx = item.rawTransaction
 
         swap_data.swap_status = SwapStatus.COMPLETED
