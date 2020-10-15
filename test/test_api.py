@@ -9,6 +9,8 @@ from pycoin.encoding import b58
 from asns import asns_api
 from asns.util import sha256d
 
+from typing import Tuple
+
 
 class TestAPI(unittest.TestCase):
     def setUp(self):
@@ -29,7 +31,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), right_result)
 
-    def test_get_token_and_verify_token(self):
+    def get_token(self) -> Tuple[str, bytes]:
         response = self.client.get("/get_token/")
         response_json = response.json()
         token = response_json.get("token")
@@ -37,44 +39,33 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(isinstance(response_json, dict))
         self.assertTrue(isinstance(token, str))
         encodable = False
-        try:
-            encodable = bool(b58.a2b_base58(token))
-        except Exception:
-            pass
-        self.assertTrue(encodable)
-
-        true_response = self.client.post("/verify_token/", json={"token": token})
-        true_response_json = true_response.json()
-        true_exist = true_response_json.get("exist")
-        self.assertEqual(true_response.status_code, 200)
-        self.assertTrue(isinstance(true_response_json, dict))
-        self.assertTrue(isinstance(true_exist, bool))
-        self.assertTrue(true_exist)
-
-        false_token = "4esCzx3bbk2UNWLsxinLwGFfUv1zq5N5tUrirCMQWWBWkoxe5yrRYnkqWeqqViDodxSMT252Gif37c7UJp5RLPLy"
-        false_response = self.client.post("/verify_token/", json={"token": false_token})
-        false_response_json = false_response.json()
-        false_exist = false_response_json.get("exist")
-        self.assertEqual(false_response.status_code, 200)
-        self.assertTrue(isinstance(false_response_json, dict))
-        self.assertTrue(isinstance(false_exist, bool))
-        self.assertFalse(false_exist)
-
-    def test_register_swap_and_get_swap_list(self):
-        token_response = self.client.get("/get_token/")
-        token_response_json = token_response.json()
-        token = token_response_json.get("token")
-        self.assertEqual(token_response.status_code, 200)
-        self.assertTrue(isinstance(token_response_json, dict))
-        self.assertTrue(isinstance(token, str))
-        encodable = False
-        raw_token = ""
+        raw_token = b""
         try:
             raw_token = b58.a2b_base58(token)
             encodable = bool(raw_token)
         except Exception:
             pass
         self.assertTrue(encodable)
+        return token, raw_token
+
+    def verify_token(self, token: str, result: bool) -> None:
+        response = self.client.post("/verify_token/", json={"token": token})
+        response_json = response.json()
+        exist = response_json.get("exist")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(isinstance(response_json, dict))
+        self.assertTrue(isinstance(exist, bool))
+        self.assertEqual(exist, result)
+
+    def test_get_token_and_verify_token(self):
+        token, _ = self.get_token()
+        self.verify_token(token, True)
+
+        false_token = "4esCzx3bbk2UNWLsxinLwGFfUv1zq5N5tUrirCMQWWBWkoxe5yrRYnkqWeqqViDodxSMT252Gif37c7UJp5RLPLy"
+        self.verify_token(false_token, False)
+
+    def test_register_swap_and_get_swap_list(self):
+        token, raw_token = self.get_token()
 
         register_right_requests = {
             "token": token,
