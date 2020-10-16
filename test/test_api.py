@@ -9,7 +9,7 @@ from pycoin.encoding import b58
 from asns import asns_api
 from asns.util import sha256d
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 
 class TestAPI(unittest.TestCase):
@@ -57,13 +57,15 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(isinstance(exist, bool))
         self.assertEqual(exist, result)
 
-    def register_swap(self, req_data: Dict, status_code: int = 200, result: str = "Success") -> None:
+    def register_swap(self, req_data: Dict, status_code: int = 200, result: str = "Success") -> Optional[str]:
         response = self.client.post("/register_swap/", json=jsonable_encoder(req_data))
         response_json = response.json()
         status = response_json.get("status")
         self.assertEqual(response.status_code, status_code)
         self.assertTrue(isinstance(response_json, Dict))
         self.assertEqual(status, result)
+        if result == "Failed":
+            return response_json.get("error")
 
     def get_swap_list(self) -> Dict:
         response = self.client.get("/get_swap_list/")
@@ -92,6 +94,19 @@ class TestAPI(unittest.TestCase):
         }
 
         self.register_swap(register_right_requests)
+
+        wrong_token = "4esCzx3bbk2UNWLsxinLwGFfUv1zq5N5tUrirCMQWWBWkoxe5yrRYnkqWeqqViDodxSMT252Gif37c7UJp5RLPLy"
+        register_wrong_requests = {
+            "token": wrong_token,
+            "wantCurrency": "BTC",
+            "wantAmount": 10000,
+            "sendCurrency": "LTC",
+            "sendAmount": 100000000,
+            "receiveAddress": "12dRugNcdxK39288NjcDV4GX7rMsKCGn6B"
+        }
+
+        err = self.register_swap(register_wrong_requests, 400, "Failed")
+        self.assertEqual(err, "Token is not registered or is invalid.")
 
         right_list_response = {
             "initiatorCurrency": register_right_requests["wantCurrency"],
