@@ -23,14 +23,6 @@ class TestAPI(unittest.TestCase):
         super().tearDown()
         shutil.rmtree(self.asns_path)
 
-    def test_index(self):
-        response = self.client.get("/")
-        right_result = {
-            "message": "This server is working."
-        }
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), right_result)
-
     def get_token(self) -> Tuple[str, bytes]:
         response = self.client.get("/get_token/")
         response_json = response.json()
@@ -73,6 +65,14 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(isinstance(response_json, Dict))
         return response_json
+
+    def test_index(self):
+        response = self.client.get("/")
+        right_result = {
+            "message": "This server is working."
+        }
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), right_result)
 
     def test_get_token_and_verify_token(self):
         token, _ = self.get_token()
