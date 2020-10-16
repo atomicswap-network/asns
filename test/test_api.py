@@ -1,6 +1,7 @@
 import unittest
 import tempfile
 import shutil
+import secrets
 
 from fastapi.testclient import TestClient
 from fastapi.encoders import jsonable_encoder
@@ -78,8 +79,9 @@ class TestAPI(unittest.TestCase):
         token, _ = self.get_token()
         self.verify_token(token)
 
-        wrong_token = "4esCzx3bbk2UNWLsxinLwGFfUv1zq5N5tUrirCMQWWBWkoxe5yrRYnkqWeqqViDodxSMT252Gif37c7UJp5RLPLy"
-        self.verify_token(wrong_token, False)
+        for _ in range(10):
+            wrong_token = b58.b2a_base58(secrets.token_bytes(64))
+            self.verify_token(wrong_token, False)
 
     def test_register_swap_and_get_swap_list(self):
         token, raw_token = self.get_token()
@@ -95,7 +97,7 @@ class TestAPI(unittest.TestCase):
 
         self.register_swap(register_right_requests)
 
-        wrong_token = "4esCzx3bbk2UNWLsxinLwGFfUv1zq5N5tUrirCMQWWBWkoxe5yrRYnkqWeqqViDodxSMT252Gif37c7UJp5RLPLy"
+        wrong_token = b58.b2a_base58(secrets.token_bytes(64))
         register_wrong_requests = {
             "token": wrong_token,
             "wantCurrency": "BTC",
