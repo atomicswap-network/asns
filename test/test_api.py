@@ -76,8 +76,8 @@ class TestAPI(unittest.TestCase):
         token, _ = self.get_token()
         self.verify_token(token)
 
-        false_token = "4esCzx3bbk2UNWLsxinLwGFfUv1zq5N5tUrirCMQWWBWkoxe5yrRYnkqWeqqViDodxSMT252Gif37c7UJp5RLPLy"
-        self.verify_token(false_token, False)
+        wrong_token = "4esCzx3bbk2UNWLsxinLwGFfUv1zq5N5tUrirCMQWWBWkoxe5yrRYnkqWeqqViDodxSMT252Gif37c7UJp5RLPLy"
+        self.verify_token(wrong_token, False)
 
     def test_register_swap_and_get_swap_list(self):
         token, raw_token = self.get_token()
