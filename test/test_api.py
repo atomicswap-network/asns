@@ -126,3 +126,6 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(isinstance(exported_by_key, Dict))
         self.assertEqual(exported_by_key, right_list_response)
 
+        err = self.register_swap(register_right_requests, 400, "Failed")
+        self.assertEqual(err, "Inappropriate token status.")
+
