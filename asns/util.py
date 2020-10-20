@@ -9,6 +9,11 @@ import hashlib
 from typing import Union
 
 os_name = platform.system()
+pkg_dir = os.path.split(os.path.realpath(__file__))[0]
+
+
+def resource_path(*parts):
+    return os.path.join(pkg_dir, *parts)
 
 
 def get_path() -> str:
