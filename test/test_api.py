@@ -91,6 +91,20 @@ class TestAPI(unittest.TestCase):
             "receiveAddress": receive_address
         }
 
+    @staticmethod
+    def make_initiate_requests(
+            token: str,
+            selected_swap: str,
+            raw_tx: str = "",
+            receive_address: str = "LV5nrreyVZJVvptA9PZSD4ViegKh7Qa8MA"
+    ) -> Dict:
+        return {
+            "token": token,
+            "selectedSwap": selected_swap,
+            "rawTransaction": raw_tx,
+            "receiveAddress": receive_address
+        }
+
     def test_index(self):
         response = self.client.get("/")
         right_result = {
