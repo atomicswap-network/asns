@@ -67,6 +67,24 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(isinstance(response_json, Dict))
         return response_json
 
+    @staticmethod
+    def make_register_requests(
+            token: str,
+            want_currency: str = "BTC",
+            want_amount: int = 10000,
+            send_currency: str = "LTC",
+            send_amount: int = 100000000,
+            receive_address: str = "12dRugNcdxK39288NjcDV4GX7rMsKCGn6B"
+    ) -> Dict:
+        return {
+            "token": token,
+            "wantCurrency": want_currency,
+            "wantAmount": want_amount,
+            "sendCurrency": send_currency,
+            "sendAmount": send_amount,
+            "receiveAddress": receive_address
+        }
+
     def test_index(self):
         response = self.client.get("/")
         right_result = {
@@ -86,26 +104,12 @@ class TestAPI(unittest.TestCase):
     def test_register_swap_and_get_swap_list(self):
         token, raw_token = self.get_token()
 
-        register_right_requests = {
-            "token": token,
-            "wantCurrency": "BTC",
-            "wantAmount": 10000,
-            "sendCurrency": "LTC",
-            "sendAmount": 100000000,
-            "receiveAddress": "12dRugNcdxK39288NjcDV4GX7rMsKCGn6B"
-        }
+        register_right_requests = self.make_register_requests(token)
 
         self.register_swap(register_right_requests)
 
         wrong_token = b58.b2a_base58(secrets.token_bytes(64))
-        register_wrong_requests = {
-            "token": wrong_token,
-            "wantCurrency": "BTC",
-            "wantAmount": 10000,
-            "sendCurrency": "LTC",
-            "sendAmount": 100000000,
-            "receiveAddress": "12dRugNcdxK39288NjcDV4GX7rMsKCGn6B"
-        }
+        register_wrong_requests = self.make_register_requests(wrong_token)
 
         err = self.register_swap(register_wrong_requests, 400, "Failed")
         self.assertEqual(err, "Token is not registered or is invalid.")
