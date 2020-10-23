@@ -70,6 +70,9 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(isinstance(response_json, Dict))
         return response_json
 
+    def initiate_swap(self, req_data: Dict, status_code: int = 200, result: str = "Success") -> Optional[str]:
+        return self.optional_result_method_by_post("initiate_swap", req_data, status_code, result)
+
     @staticmethod
     def make_register_requests(
             token: str,
@@ -135,4 +138,17 @@ class TestAPI(unittest.TestCase):
 
         err = self.register_swap(register_right_requests, 400, "Failed")
         self.assertEqual(err, "Inappropriate token status.")
+
+    def test_register_swap_and_initiate_swap_and_get_initiator_info(self):
+        p_token, p_raw_token = self.get_token()  # participator's token
+        i_token, i_raw_token = self.get_token()  # initiator's token
+
+        register_right_requests = self.make_register_requests(p_token)
+
+        self.register_swap(register_right_requests)
+
+        selected_swap = sha256d(p_raw_token).hex()
+        initiate_right_requests = self.make_initiate_requests(i_token, selected_swap)
+
+        self.initiate_swap(initiate_right_requests)
 
