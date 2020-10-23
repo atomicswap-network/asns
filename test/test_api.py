@@ -50,8 +50,8 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(isinstance(exist, bool))
         self.assertEqual(exist, result)
 
-    def register_swap(self, req_data: Dict, status_code: int = 200, result: str = "Success") -> Optional[str]:
-        response = self.client.post("/register_swap/", json=jsonable_encoder(req_data))
+    def optional_result_method_by_post(self, end_point: str, req_data: Dict, status_code, result: str) -> Optional[str]:
+        response = self.client.post(end_point, json=jsonable_encoder(req_data))
         response_json = response.json()
         status = response_json.get("status")
         self.assertEqual(response.status_code, status_code)
@@ -59,6 +59,9 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(status, result)
         if result == "Failed":
             return response_json.get("error")
+
+    def register_swap(self, req_data: Dict, status_code: int = 200, result: str = "Success") -> Optional[str]:
+        return self.optional_result_method_by_post("register_swap", req_data, status_code, result)
 
     def get_swap_list(self) -> Dict:
         response = self.client.get("/get_swap_list/")
