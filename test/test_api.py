@@ -51,7 +51,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(exist, result)
 
     def optional_result_method_by_post(self, end_point: str, req_data: Dict, status_code, result: str) -> Optional[str]:
-        response = self.client.post(end_point, json=jsonable_encoder(req_data))
+        response = self.client.post(f"/{end_point}/", json=jsonable_encoder(req_data))
         response_json = response.json()
         status = response_json.get("status")
         self.assertEqual(response.status_code, status_code)
