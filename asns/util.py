@@ -61,6 +61,8 @@ class ErrorMessages(Enum):
     UPDATE_SWAP = "Failed to update swap data: "
     SWAP_INVALID = "Selected swap is not registered or is invalid."
     SWAP_PROGRESS = "Selected swap is already in progress or completed."
+    SWAP_STATUS_INVALID = "Inappropriate swap status."
+    FATAL_ERROR = "A fatal error has occurred."
 
 
 class ResponseStatus(Enum):
