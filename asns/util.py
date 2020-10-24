@@ -6,6 +6,7 @@ import platform
 import os
 import hashlib
 
+from enum import Enum
 from typing import Union
 
 os_name = platform.system()
@@ -51,3 +52,17 @@ def sha256d(x: Union[bytes, str]) -> bytes:
     x = to_bytes(x, "utf8")
     return bytes(sha256(sha256(x)))
 
+
+class ErrorMessages(Enum):
+    TOKEN_INVALID = "Token is not registered or is invalid."
+    TOKEN_STATUS_INVALID = "Inappropriate token status."
+    TOKEN_USED = "Token is already used."
+    UPDATE_TOKEN = "Failed to update token status: "
+    UPDATE_SWAP = "Failed to update swap data: "
+    SWAP_INVALID = "Selected swap is not registered or is invalid."
+    SWAP_PROGRESS = "Selected swap is already in progress or completed."
+
+
+class ResponseStatus(Enum):
+    SUCCESS = "Success"
+    FAILED = "Failed"
