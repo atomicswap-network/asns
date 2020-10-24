@@ -21,7 +21,7 @@ from typing import Dict, Union, List
 
 from .db import SwapStatus, TokenStatus, TokenDBData, TxDBData, DBCommons
 from .tx import BitcoinTx
-from .util import sha256d
+from .util import sha256d, ErrorMessages, ResponseStatus
 
 
 async def api_spawn(app, **kwargs) -> None:
@@ -103,7 +103,7 @@ class RedeemSwapItem(TokenAndTxItem):
 @api.exception_handler(StarletteHTTPException)
 async def http_exception_handler(_: Request, exc: StarletteHTTPException):
     return JSONResponse(
-        content=jsonable_encoder({"status": "Failed", "error": str(exc.detail)})
+        content=jsonable_encoder({"status": ResponseStatus.FAILED, "error": str(exc.detail)})
     )
 
 
@@ -131,7 +131,7 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError):
         result.append(err)
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
-        content=jsonable_encoder({"status": "Failed", "error": result}),
+        content=jsonable_encoder({"status": ResponseStatus.FAILED, "error": result}),
     )
 
 
@@ -152,7 +152,7 @@ async def get_token(commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     hashed_token = sha256d(raw_token)
     created_at = int(time.time())
     result = {
-        "status": "Success",
+        "status": ResponseStatus.SUCCESS,
         "token": token
     }
 
@@ -161,7 +161,7 @@ async def get_token(commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     except Exception as e:
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         result = {
-            "status": "Failed",
+            "status": ResponseStatus.FAILED,
             "token": None,
             "error": str(e)
         }
@@ -178,7 +178,7 @@ async def verify_token(item: TokenItem, commons: DBCommons = Depends(db_commons)
         exist, create_at = False, None
 
     result = {
-        "status": "Success",
+        "status": ResponseStatus.SUCCESS,
         "exist": exist,
         "create_at": create_at
     }
@@ -195,7 +195,7 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends(db_
 
     if msg:
         result = {
-            "status": "Failed",
+            "status": ResponseStatus.FAILED,
             "error": msg
         }
     else:
@@ -235,14 +235,14 @@ async def get_swap_list(commons: DBCommons = Depends(db_commons)) -> JSONRespons
     try:
         all_list = commons.tx_db.get_all()
         result = {
-            "status": "Success",
+            "status": ResponseStatus.SUCCESS,
             "data": {}
         }
     except Exception:
         all_list = {}
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         result = {
-            "status": "Failed",
+            "status": ResponseStatus.FAILED,
             "data": {}
         }
     for key in all_list.keys():
@@ -303,7 +303,7 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends(db_co
 
     if msg:
         result = {
-            "status": "Failed",
+            "status": ResponseStatus.FAILED,
             "error": msg
         }
     else:
@@ -314,16 +314,16 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends(db_co
             initiator_address = swap_data.i_addr
             token_hash = swap_data.i_token_hash
             result = {
-                "status": "Success",
+                "status": ResponseStatus.SUCCESS,
                 "initiatorAddress": initiator_address,
                 "tokenHash": token_hash.hex()
             }
         else:
             result = {
-                "status": "Failed",
+                "status": ResponseStatus.FAILED,
                 "initiatorAddress": None,
                 "tokenHash": None,
-                "error": "Swap has not initiated or has already completed."
+                "error": ErrorMessages.SWAP_STATUS_INVALID
             }
 
     if result.get("error") is not None:
@@ -371,13 +371,13 @@ async def get_swap_status(token_hash: str, commons: DBCommons = Depends(db_commo
     if swap_data is None:
         status_code = status.HTTP_400_BAD_REQUEST
         result = {
-            "status": "Failed",
+            "status": ResponseStatus.FAILED,
             "swapStatus": None,
-            "error": "Swap is not registered or is invalid."
+            "error": ErrorMessages.SWAP_INVALID
         }
     else:
         result = {
-            "status": "Success",
+            "status": ResponseStatus.SUCCESS,
             "swapStatus": swap_data.swap_status.name
         }
 
@@ -439,12 +439,12 @@ async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends(db_comm
                     continue
         if token is None:
             result = {
-                "status": "Failed",
-                "error": "A fatal error has occurred."
+                "status": ResponseStatus.FAILED,
+                "error": ErrorMessages.FATAL_ERROR
             }
         else:
             result = {
-                "status": "Success",
+                "status": ResponseStatus.SUCCESS,
                 "token": token.hex()
             }
 

@@ -11,7 +11,7 @@ import plyvel
 import pickle
 
 from pycoin.encoding import b58
-from .util import root_path, sha256d
+from .util import root_path, sha256d, ErrorMessages, ResponseStatus
 
 
 class TokenStatus(IntEnum):
@@ -206,12 +206,12 @@ class DBCommons:
             except Exception:
                 pass
         else:
-            msg = "Token is not registered or is invalid."
+            msg = ErrorMessages.TOKEN_INVALID
 
         if equal_status:
-            msg = "Inappropriate token status."
+            msg = ErrorMessages.TOKEN_STATUS_INVALID
         elif is_used:
-            msg = "Token is already used."
+            msg = ErrorMessages.TOKEN_USED
 
         return msg
 
@@ -230,16 +230,16 @@ class DBCommons:
     def update_swap(self, hashed_token: bytes, swap_data: TxDBData, err: str = None) -> Dict:
         try:
             if err:
-                raise Exception(f"Failed to update token status: {err}")
+                raise Exception(f"{ErrorMessages.UPDATE_TOKEN}{err}")
             self.tx_db.put(hashed_token, swap_data)
             result = {
-                "status": "Success"
+                "status": ResponseStatus.SUCCESS
             }
         except Exception as e:
             if err is None:
-                e = f"Failed to update swap data: {str(e)}"
+                e = f"{ErrorMessages.UPDATE_SWAP}{str(e)}"
             result = {
-                "status": "Failed",
+                "status": ResponseStatus.FAILED,
                 "error": str(e)
             }
         return result
@@ -265,13 +265,13 @@ class DBCommons:
                 pass
 
         if selected_swap_data is None:
-            msg = "Selected swap is not registered or is invalid."
+            msg = ErrorMessages.SWAP_INVALID
 
         if selected_swap_data.swap_status != swap_status:
-            msg = "Selected swap is already in progress or completed."
+            msg = ErrorMessages.SWAP_PROGRESS
 
         result = {
-            "status": "Failed",
+            "status": ResponseStatus.FAILED,
             "error": msg
         } if msg is not None else None
 
