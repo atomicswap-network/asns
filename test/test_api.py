@@ -78,6 +78,13 @@ class TestAPI(unittest.TestCase):
     def initiate_swap(self, req_data: Dict, status_code: int = 200, result: ResponseStatus = ResponseStatus.SUCCESS) -> Optional[str]:
         return self.optional_result_method_by_post("initiate_swap", req_data, status_code, result)
 
+    def get_initiator_info(self, token: str, status_code: int = 200) -> Dict:
+        response = self.client.post("/get_initiator_info/", json={"token": token})
+        response_json = response.json()
+        self.assertEqual(response.status_code, status_code)
+        self.assertTrue(isinstance(response_json, Dict))
+        return response_json
+
     @staticmethod
     def make_register_requests(
             token: str,
@@ -170,4 +177,15 @@ class TestAPI(unittest.TestCase):
         initiate_right_requests = self.make_initiate_requests(i_token, selected_swap)
 
         self.initiate_swap(initiate_right_requests)
+
+        i_info = self.get_initiator_info(p_token)
+
+        right_response = {
+            "status": ResponseStatus.SUCCESS.value,
+            "initiatorAddress": initiate_right_requests["receiveAddress"],
+            "tokenHash": sha256d(i_raw_token).hex()
+        }
+
+        self.assertEqual(i_info, right_response)
+
 
