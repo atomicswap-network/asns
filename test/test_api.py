@@ -8,7 +8,9 @@ from fastapi.encoders import jsonable_encoder
 from pycoin.encoding import b58
 
 from asns import asns_api
-from asns.util import sha256d
+from asns.util import sha256d, ErrorMessages, ResponseStatus
+
+from enum import Enum
 
 from typing import Dict, Tuple, Optional
 
@@ -23,6 +25,9 @@ class TestAPI(unittest.TestCase):
     def tearDown(self):
         super().tearDown()
         shutil.rmtree(self.asns_path)
+
+    def assertEqualEnumContent(self, first: str, second: Enum) -> None:
+        self.assertEqual(first, second.value)
 
     def get_token(self) -> Tuple[str, bytes]:
         response = self.client.get("/get_token/")
@@ -50,17 +55,17 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(isinstance(exist, bool))
         self.assertEqual(exist, result)
 
-    def optional_result_method_by_post(self, end_point: str, req_data: Dict, status_code, result: str) -> Optional[str]:
+    def optional_result_method_by_post(self, end_point: str, req_data: Dict, status_code, result: ResponseStatus) -> Optional[str]:
         response = self.client.post(f"/{end_point}/", json=jsonable_encoder(req_data))
         response_json = response.json()
         status = response_json.get("status")
         self.assertEqual(response.status_code, status_code)
         self.assertTrue(isinstance(response_json, Dict))
-        self.assertEqual(status, result)
-        if result == "Failed":
+        self.assertEqualEnumContent(status, result)
+        if result == ResponseStatus.FAILED:
             return response_json.get("error")
 
-    def register_swap(self, req_data: Dict, status_code: int = 200, result: str = "Success") -> Optional[str]:
+    def register_swap(self, req_data: Dict, status_code: int = 200, result: ResponseStatus = ResponseStatus.SUCCESS) -> Optional[str]:
         return self.optional_result_method_by_post("register_swap", req_data, status_code, result)
 
     def get_swap_list(self) -> Dict:
@@ -70,7 +75,7 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(isinstance(response_json, Dict))
         return response_json
 
-    def initiate_swap(self, req_data: Dict, status_code: int = 200, result: str = "Success") -> Optional[str]:
+    def initiate_swap(self, req_data: Dict, status_code: int = 200, result: ResponseStatus = ResponseStatus.SUCCESS) -> Optional[str]:
         return self.optional_result_method_by_post("initiate_swap", req_data, status_code, result)
 
     @staticmethod
@@ -131,8 +136,8 @@ class TestAPI(unittest.TestCase):
         wrong_token = b58.b2a_base58(secrets.token_bytes(64))
         register_wrong_requests = self.make_register_requests(wrong_token)
 
-        err = self.register_swap(register_wrong_requests, 400, "Failed")
-        self.assertEqual(err, "Token is not registered or is invalid.")
+        err = self.register_swap(register_wrong_requests, 400, ResponseStatus.FAILED)
+        self.assertEqualEnumContent(err, ErrorMessages.TOKEN_INVALID)
 
         right_list_response = {
             "initiatorCurrency": register_right_requests["wantCurrency"],
@@ -150,8 +155,8 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(isinstance(exported_by_key, Dict))
         self.assertEqual(exported_by_key, right_list_response)
 
-        err = self.register_swap(register_right_requests, 400, "Failed")
-        self.assertEqual(err, "Inappropriate token status.")
+        err = self.register_swap(register_right_requests, 400, ResponseStatus.FAILED)
+        self.assertEqualEnumContent(err, ErrorMessages.TOKEN_STATUS_INVALID)
 
     def test_register_swap_and_initiate_swap_and_get_initiator_info(self):
         p_token, p_raw_token = self.get_token()  # participator's token
