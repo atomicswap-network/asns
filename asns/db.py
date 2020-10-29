@@ -35,11 +35,13 @@ class TxDBData:
     i_receive_amount: int = None
     i_addr: str = None
     i_token_hash: bytes = None
+    i_contract: str = None
     i_raw_tx: str = None
     i_redeem_raw_tx: str = None
     p_currency: str = None  # TODO: Make Currency Dataclass
     p_receive_amount: int = None
     p_addr: str = None
+    p_contract: str = None
     p_raw_tx: str = None
     p_redeem_raw_tx: str = None
     swap_status: SwapStatus = SwapStatus.REGISTERED
@@ -55,11 +57,13 @@ class TxDBData:
             ("i_receive_amount", int),
             ("i_addr", str),
             ("i_token_hash", bytes),
+            ("i_contract", str),
             ("i_raw_tx", str),
             ("i_redeem_raw_tx", str),
             ("p_currency", str),
             ("p_receive_amount", int),
             ("p_addr", str),
+            ("p_contract", str),
             ("p_raw_tx", str),
             ("p_redeem_raw_tx", str),
             ("swap_status", int)
