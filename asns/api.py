@@ -103,6 +103,7 @@ class RedeemSwapItem(TokenAndTxItem):
 @api.exception_handler(StarletteHTTPException)
 async def http_exception_handler(_: Request, exc: StarletteHTTPException):
     return JSONResponse(
+        status_code=exc.status_code,
         content=jsonable_encoder({"status": "Failed", "error": str(exc.detail)})
     )
 
