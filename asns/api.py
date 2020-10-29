@@ -83,6 +83,10 @@ class TokenAndTxItem(TokenItem):
     rawTransaction: str
 
 
+class TokenAndTxAndContractItem(TokenAndTxItem):
+    contract: str
+
+
 class RegisterSwapItem(TokenItem):
     wantCurrency: str
     wantAmount: int
@@ -91,7 +95,7 @@ class RegisterSwapItem(TokenItem):
     receiveAddress: str
 
 
-class InitiateSwapItem(TokenAndTxItem):
+class InitiateSwapItem(TokenAndTxAndContractItem):
     selectedSwap: str
     receiveAddress: str
 
@@ -274,6 +278,7 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends(db_
     )
 
     if result is None:
+        contract = item.contract
         initiate_raw_tx = item.rawTransaction
         receive_address = item.receiveAddress
 
@@ -281,6 +286,7 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends(db_
         hashed_token = sha256d(raw_token)
 
         selected_swap_data.swap_status = SwapStatus.INITIATED
+        selected_swap_data.i_contract = contract
         selected_swap_data.i_raw_tx = initiate_raw_tx  # TODO: Raw Transaction Validation
         selected_swap_data.i_addr = receive_address  # TODO: Receive Address Validation
         selected_swap_data.i_token_hash = hashed_token
@@ -334,7 +340,7 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends(db_co
 
 
 @api.post("/participate_swap/")
-async def participate_swap(item: TokenAndTxItem, commons: DBCommons = Depends(db_commons)) -> JSONResponse:
+async def participate_swap(item: TokenAndTxAndContractItem, commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     token = item.token
     status_code = status.HTTP_200_OK
 
@@ -345,9 +351,11 @@ async def participate_swap(item: TokenAndTxItem, commons: DBCommons = Depends(db
     )
 
     if result is None:
+        contract = item.contract
         participate_raw_tx = item.rawTransaction
 
         swap_data.swap_status = SwapStatus.PARTICIPATED
+        swap_data.p_contract = contract
         swap_data.p_raw_tx = participate_raw_tx  # TODO: Raw Transaction Validation
 
         result = commons.update_swap(hashed_token, swap_data)
