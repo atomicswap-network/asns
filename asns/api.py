@@ -299,7 +299,7 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends(db_co
     token = item.token
 
     status_code = status.HTTP_200_OK
-    msg = commons.token_status_msg(token, [TokenStatus.INITIATOR, TokenStatus.PARTICIPATOR])
+    msg = commons.token_status_msg(token, [TokenStatus.PARTICIPATOR])
     if msg == ErrorMessages.TOKEN_USED:
         msg = None
 
