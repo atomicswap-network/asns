@@ -325,7 +325,7 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends(db_co
             result = {
                 "status": "Success",
                 "initiatorAddress": initiator_address,
-                "initiatorContract": initiator_contract,
+                "initiateContract": initiator_contract,
                 "initiateRawTransaction": initiate_tx,
                 "tokenHash": token_hash.hex()
             }
@@ -334,7 +334,7 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends(db_co
                 "status": "Failed",
                 "initiatorAddress": None,
                 "tokenHash": None,
-                "initiatorContract": None,
+                "initiateContract": None,
                 "initiateRawTransaction": None,
                 "error": "Swap has not initiated or has already completed."
             }
