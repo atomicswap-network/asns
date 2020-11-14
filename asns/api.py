@@ -99,13 +99,12 @@ class RegisterSwapItem(TokenItem):
     receiveAddress: str
 
 
-class InitiateSwapItem(TokenAndTxAndContractItem):
-    selectedSwap: str
+class InitiateSwapItem(TokenAndTxAndContractItem, TokenAndSelectedSwapItem):
     receiveAddress: str
 
 
-class RedeemSwapItem(TokenAndTxItem):
-    selectedSwap: str
+class RedeemSwapItem(TokenAndTxItem, TokenAndSelectedSwapItem):
+    pass
 
 
 @api.exception_handler(StarletteHTTPException)
