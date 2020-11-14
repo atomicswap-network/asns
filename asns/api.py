@@ -408,6 +408,9 @@ async def get_participator_info(
                 "error": "Swap has not initiated or has already completed."
             }
 
+    if result.get("error") is not None:
+        status_code = status.HTTP_400_BAD_REQUEST
+
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
 
