@@ -270,8 +270,7 @@ class DBCommons:
 
         if selected_swap_data is None:
             msg = ErrorMessages.SWAP_INVALID
-
-        if selected_swap_data.swap_status != swap_status:
+        elif selected_swap_data.swap_status != swap_status:
             msg = ErrorMessages.SWAP_PROGRESS
 
         result = {
