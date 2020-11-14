@@ -399,13 +399,13 @@ async def get_participator_info(
             participate_contract = selected_swap_data.p_contract
             participate_tx = selected_swap_data.p_raw_tx
             result = {
-                "status": "Success",
+                "status": ResponseStatus.SUCCESS,
                 "participateContract": participate_contract,
                 "participateRawTransaction": participate_tx
             }
         else:
             result = {
-                "status": "Failed",
+                "status": ResponseStatus.FAILED,
                 "participateContract": None,
                 "participateRawTransaction": None,
                 "error": ErrorMessages.SWAP_STATUS_INVALID
