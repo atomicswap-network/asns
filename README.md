@@ -21,3 +21,9 @@ pip3 install -r requirements.txt  # Windowsの場合は requirements-windows.txt
 ## License
 このソフトウェアは[GPL v3](LICENSE)でライセンスされています。
 
+## Branch Rules
+
+|ブランチネーミングルール|用途|
+|---|---|
+|`feature/#{ISSUE_ID}-#{branch_title_name}`|将来的な機能の実装や、緊急ではないバグの修正に用います。|
+|`hothix/#{ISSUE_ID}-#{branch_title_name}`|緊急のバグ・脆弱性修正などに用います。|

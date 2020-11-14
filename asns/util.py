@@ -53,6 +53,14 @@ def sha256d(x: Union[bytes, str]) -> bytes:
     return bytes(sha256(sha256(x)))
 
 
+def hash160(x: Union[bytes, str]) -> bytes:
+    x = to_bytes(x, "utf8")
+    h160 = hashlib.new("ripemd160")
+    h160.update(sha256(x))
+    out = h160.digest()
+    return bytes(out)
+
+
 class ErrorMessages(Enum):
     TOKEN_INVALID = "Token is not registered or is invalid."
     TOKEN_STATUS_INVALID = "Inappropriate token status."
