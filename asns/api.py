@@ -355,7 +355,8 @@ async def participate_swap(item: TokenAndTxAndContractItem, commons: DBCommons =
     result, hashed_token, swap_data = commons.verify_token_and_get_swap_data(
         token,
         [TokenStatus.PARTICIPATOR],
-        SwapStatus.INITIATED
+        SwapStatus.INITIATED,
+        [ErrorMessages.TOKEN_USED]
     )
 
     if result is None:
@@ -411,6 +412,7 @@ async def redeem_swap(item: RedeemSwapItem, commons: DBCommons = Depends(db_comm
         token,
         [TokenStatus.INITIATOR],
         SwapStatus.PARTICIPATED,
+        [ErrorMessages.TOKEN_USED],
         selected_swap_key
     )
 
@@ -436,7 +438,8 @@ async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends(db_comm
     result, hashed_token, swap_data = commons.verify_token_and_get_swap_data(
         token,
         [TokenStatus.PARTICIPATOR],
-        SwapStatus.REDEEMED
+        SwapStatus.REDEEMED,
+        [ErrorMessages.TOKEN_USED]
     )
 
     if result is None:
@@ -479,7 +482,8 @@ async def complete_swap(item: TokenAndTxItem, commons: DBCommons = Depends(db_co
     result, hashed_token, swap_data = commons.verify_token_and_get_swap_data(
         token,
         [TokenStatus.PARTICIPATOR],
-        SwapStatus.REDEEMED
+        SwapStatus.REDEEMED,
+        [ErrorMessages.TOKEN_USED]
     )
 
     if result is None:
