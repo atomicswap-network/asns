@@ -253,6 +253,7 @@ class DBCommons:
             token: str,
             token_statuses: List[TokenStatus],
             swap_status: SwapStatus,
+            allow_error: List[ErrorMessages] = [],
             selected_swap_key: bytes = None
     ) -> Tuple[Optional[Dict], bytes, Optional[TxDBData]]:
         msg = self.token_status_msg(token, token_statuses)
@@ -262,7 +263,7 @@ class DBCommons:
             raw_token = b58.a2b_base58(token)
             selected_swap_key = sha256d(raw_token)
 
-        if msg is None:
+        if msg is None or msg in allow_error:
             try:
                 selected_swap_data = self.tx_db.get(selected_swap_key)
             except Exception:
