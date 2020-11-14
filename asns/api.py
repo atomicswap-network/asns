@@ -79,6 +79,10 @@ class TokenItem(BaseModel):
     token: str
 
 
+class TokenAndSelectedSwapItem(TokenItem):
+    selectedSwap: str
+
+
 class TokenAndTxItem(TokenItem):
     rawTransaction: str
 
@@ -95,13 +99,12 @@ class RegisterSwapItem(TokenItem):
     receiveAddress: str
 
 
-class InitiateSwapItem(TokenAndTxAndContractItem):
-    selectedSwap: str
+class InitiateSwapItem(TokenAndTxAndContractItem, TokenAndSelectedSwapItem):
     receiveAddress: str
 
 
-class RedeemSwapItem(TokenAndTxItem):
-    selectedSwap: str
+class RedeemSwapItem(TokenAndTxItem, TokenAndSelectedSwapItem):
+    pass
 
 
 @api.exception_handler(StarletteHTTPException)
@@ -321,13 +324,13 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends(db_co
 
         if SwapStatus.REGISTERED < (swap_data := commons.tx_db.get(hashed_token)).swap_status < SwapStatus.COMPLETED:
             initiator_address = swap_data.i_addr
-            initiator_contract = swap_data.i_contract
+            initiate_contract = swap_data.i_contract
             initiate_tx = swap_data.i_raw_tx
             token_hash = swap_data.i_token_hash
             result = {
                 "status": ResponseStatus.SUCCESS,
                 "initiatorAddress": initiator_address,
-                "initiateContract": initiator_contract,
+                "initiateContract": initiate_contract,
                 "initiateRawTransaction": initiate_tx,
                 "tokenHash": token_hash.hex()
             }
@@ -375,29 +378,38 @@ async def participate_swap(item: TokenAndTxAndContractItem, commons: DBCommons =
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
 
-@api.get("/get_swap_status/{token_hash}/")
-async def get_swap_status(token_hash: str, commons: DBCommons = Depends(db_commons)) -> JSONResponse:
+@api.get("/get_participator_info/")
+async def get_participator_info(
+        item: TokenAndSelectedSwapItem,
+        commons: DBCommons = Depends(db_commons)
+) -> JSONResponse:
+    token = item.token
     status_code = status.HTTP_200_OK
 
-    swap_data = None
-    try:
-        swap_key = binascii.a2b_hex(token_hash)
-        swap_data = commons.tx_db.get(swap_key)
-    except Exception:
-        pass
+    selected_swap_key = binascii.a2b_hex(item.selectedSwap)
+    result, _, selected_swap_data = commons.verify_token_and_get_swap_data(
+        token,
+        [TokenStatus.INITIATOR],
+        SwapStatus.PARTICIPATED,
+        selected_swap_key
+    )
 
-    if swap_data is None:
-        status_code = status.HTTP_400_BAD_REQUEST
-        result = {
-            "status": ResponseStatus.FAILED,
-            "swapStatus": None,
-            "error": ErrorMessages.SWAP_INVALID
-        }
-    else:
-        result = {
-            "status": ResponseStatus.SUCCESS,
-            "swapStatus": swap_data.swap_status.name
-        }
+    if result is None:
+        if SwapStatus.PARTICIPATED < selected_swap_data.swap_status < SwapStatus.COMPLETED:
+            participate_contract = selected_swap_data.p_contract
+            participate_tx = selected_swap_data.p_raw_tx
+            result = {
+                "status": "Success",
+                "participateContract": participate_contract,
+                "participateRawTransaction": participate_tx
+            }
+        else:
+            result = {
+                "status": "Failed",
+                "participateContract": None,
+                "participateRawTransaction": None,
+                "error": ErrorMessages.SWAP_STATUS_INVALID
+            }
 
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
