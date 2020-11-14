@@ -185,7 +185,7 @@ class DBCommons:
         self.tx_db = TxDB(db_base_path)
         self.token_db = TokenDB(db_base_path)
 
-    def token_status_msg(self, token: str, token_status: List[TokenStatus]) -> Optional[str]:
+    def token_status_msg(self, token: str, token_status: List[TokenStatus]) -> Optional[ErrorMessages]:
         is_exist = False
         is_used = False
         equal_status = False
