@@ -319,13 +319,13 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends(db_co
 
         if SwapStatus.REGISTERED < (swap_data := commons.tx_db.get(hashed_token)).swap_status < SwapStatus.COMPLETED:
             initiator_address = swap_data.i_addr
-            initiator_contract = swap_data.i_contract
+            initiate_contract = swap_data.i_contract
             initiate_tx = swap_data.i_raw_tx
             token_hash = swap_data.i_token_hash
             result = {
                 "status": "Success",
                 "initiatorAddress": initiator_address,
-                "initiateContract": initiator_contract,
+                "initiateContract": initiate_contract,
                 "initiateRawTransaction": initiate_tx,
                 "tokenHash": token_hash.hex()
             }
