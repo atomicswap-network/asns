@@ -460,6 +460,7 @@ async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends(db_comm
         if token is None:
             result = {
                 "status": ResponseStatus.FAILED,
+                "token": None,
                 "error": ErrorMessages.FATAL_ERROR
             }
         else:
