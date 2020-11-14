@@ -274,7 +274,7 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends(db_
         token,
         [TokenStatus.NOT_USED],
         SwapStatus.REGISTERED,
-        selected_swap_key
+        selected_swap_key=selected_swap_key
     )
 
     if result is None:
