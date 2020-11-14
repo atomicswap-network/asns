@@ -79,6 +79,10 @@ class TokenItem(BaseModel):
     token: str
 
 
+class TokenAndSelectedSwapItem(TokenItem):
+    selectedSwap: str
+
+
 class TokenAndTxItem(TokenItem):
     rawTransaction: str
 
@@ -368,6 +372,42 @@ async def participate_swap(item: TokenAndTxAndContractItem, commons: DBCommons =
 
     if result.get("error") is not None:
         status_code = status.HTTP_400_BAD_REQUEST
+
+    return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
+
+
+@api.get("/get_participator_info/")
+async def get_participator_info(
+        item: TokenAndSelectedSwapItem,
+        commons: DBCommons = Depends(db_commons)
+) -> JSONResponse:
+    token = item.token
+    status_code = status.HTTP_200_OK
+
+    selected_swap_key = binascii.a2b_hex(item.selectedSwap)
+    result, _, selected_swap_data = commons.verify_token_and_get_swap_data(
+        token,
+        [TokenStatus.INITIATOR],
+        SwapStatus.PARTICIPATED,
+        selected_swap_key
+    )
+
+    if result is None:
+        if SwapStatus.PARTICIPATED < selected_swap_data.swap_status < SwapStatus.COMPLETED:
+            participate_contract = selected_swap_data.p_contract
+            participate_tx = selected_swap_data.p_raw_tx
+            result = {
+                "status": "Success",
+                "participateContract": participate_contract,
+                "participateRawTransaction": participate_tx
+            }
+        else:
+            result = {
+                "status": "Failed",
+                "participateContract": None,
+                "participateRawTransaction": None,
+                "error": "Swap has not initiated or has already completed."
+            }
 
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
