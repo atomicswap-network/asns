@@ -391,7 +391,7 @@ async def get_participator_info(
         token,
         [TokenStatus.INITIATOR],
         SwapStatus.PARTICIPATED,
-        selected_swap_key
+        selected_swap_key=selected_swap_key
     )
 
     if result is None:
