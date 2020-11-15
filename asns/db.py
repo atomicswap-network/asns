@@ -274,8 +274,10 @@ class DBCommons:
 
         if selected_swap_data is None:
             msg = ErrorMessages.SWAP_INVALID
-        elif selected_swap_data.swap_status != swap_status:
+        elif selected_swap_data.swap_status > swap_status:
             msg = ErrorMessages.SWAP_PROGRESS
+        elif selected_swap_data.swap_status != swap_status:
+            msg = ErrorMessages.SWAP_STATUS_INVALID
 
         result = {
             "status": ResponseStatus.FAILED,
