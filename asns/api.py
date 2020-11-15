@@ -395,7 +395,7 @@ async def get_participator_info(
     )
 
     if result is None:
-        if SwapStatus.PARTICIPATED < selected_swap_data.swap_status < SwapStatus.COMPLETED:
+        if SwapStatus.PARTICIPATED <= selected_swap_data.swap_status < SwapStatus.COMPLETED:
             participate_contract = selected_swap_data.p_contract
             participate_tx = selected_swap_data.p_raw_tx
             result = {
