@@ -378,7 +378,7 @@ async def participate_swap(item: TokenAndTxAndContractItem, commons: DBCommons =
     return JSONResponse(status_code=status_code, content=jsonable_encoder(result))
 
 
-@api.get("/get_participator_info/")
+@api.post("/get_participator_info/")
 async def get_participator_info(
         item: TokenAndSelectedSwapItem,
         commons: DBCommons = Depends(db_commons)
