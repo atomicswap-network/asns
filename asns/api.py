@@ -456,10 +456,10 @@ async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends(db_comm
         [ErrorMessages.TOKEN_USED]
     )
 
+    initiator_token = None
     if result is None:
         redeem_raw_tx: BitcoinTx = BitcoinTx.from_hex(swap_data.i_redeem_raw_tx)
         txs_in: List[BitcoinTx.TxIn] = redeem_raw_tx.txs_in
-        token = None
         for tx_in in txs_in:
             parsed_script: List[str] = ScriptTools.opcode_list(tx_in.script)
             for data in parsed_script:
@@ -467,21 +467,21 @@ async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends(db_comm
                     pushed_data = binascii.a2b_hex(data[1:-1])
                     hashed_data = sha256d(pushed_data)
                     if swap_data.i_token_hash == hashed_data:
-                        token = pushed_data
+                        initiator_token = pushed_data
                         break
                 else:
                     continue
-        if token is None:
-            result = {
-                "status": ResponseStatus.FAILED,
-                "token": None,
-                "error": ErrorMessages.FATAL_ERROR
-            }
-        else:
-            result = {
-                "status": ResponseStatus.SUCCESS,
-                "token": token.hex()
-            }
+    if initiator_token is None:
+        result = {
+            "status": ResponseStatus.FAILED,
+            "token": None,
+            "error": ErrorMessages.FATAL_ERROR if result is None else result["error"]
+        }
+    else:
+        result = {
+            "status": ResponseStatus.SUCCESS,
+            "token": initiator_token.hex()
+        }
 
     if result.get("error") is not None:
         status_code = status.HTTP_400_BAD_REQUEST
