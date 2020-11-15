@@ -394,22 +394,21 @@ async def get_participator_info(
         selected_swap_key=selected_swap_key
     )
 
-    if result is None:
-        if SwapStatus.PARTICIPATED <= selected_swap_data.swap_status < SwapStatus.COMPLETED:
-            participate_contract = selected_swap_data.p_contract
-            participate_tx = selected_swap_data.p_raw_tx
-            result = {
-                "status": ResponseStatus.SUCCESS,
-                "participateContract": participate_contract,
-                "participateRawTransaction": participate_tx
-            }
-        else:
-            result = {
-                "status": ResponseStatus.FAILED,
-                "participateContract": None,
-                "participateRawTransaction": None,
-                "error": ErrorMessages.SWAP_STATUS_INVALID
-            }
+    if result is None and SwapStatus.PARTICIPATED <= selected_swap_data.swap_status < SwapStatus.COMPLETED:
+        participate_contract = selected_swap_data.p_contract
+        participate_tx = selected_swap_data.p_raw_tx
+        result = {
+            "status": ResponseStatus.SUCCESS,
+            "participateContract": participate_contract,
+            "participateRawTransaction": participate_tx
+        }
+    else:
+        result = {
+            "status": ResponseStatus.FAILED,
+            "participateContract": None,
+            "participateRawTransaction": None,
+            "error": ErrorMessages.SWAP_STATUS_INVALID if result is None else result["error"]
+        }
 
     if result.get("error") is not None:
         status_code = status.HTTP_400_BAD_REQUEST
