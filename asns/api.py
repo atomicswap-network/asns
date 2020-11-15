@@ -16,7 +16,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from uvicorn import Config, Server
 from pycoin.encoding import b58
-from pycoin.vm.ScriptTools import ScriptTools
+from pycoin.coins.bitcoin.ScriptTools import BitcoinScriptTools as ScriptTools
 from typing import Dict, Union, List
 
 from .db import SwapStatus, TokenStatus, TokenDBData, TxDBData, DBCommons
