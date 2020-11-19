@@ -107,12 +107,14 @@ class TestAPI(unittest.TestCase):
     def make_initiate_requests(
             token: str,
             selected_swap: str,
-            raw_tx: str = "",
+            contract: str,
+            raw_tx: str,
             receive_address: str = "LV5nrreyVZJVvptA9PZSD4ViegKh7Qa8MA"
     ) -> Dict:
         return {
             "token": token,
             "selectedSwap": selected_swap,
+            "contract": contract,
             "rawTransaction": raw_tx,
             "receiveAddress": receive_address
         }
@@ -174,7 +176,18 @@ class TestAPI(unittest.TestCase):
         self.register_swap(register_right_requests)
 
         selected_swap = sha256d(p_raw_token).hex()
-        initiate_right_requests = self.make_initiate_requests(i_token, selected_swap)
+        contract = (
+            "6382012088a820f1636905818c86f7720a410df614656c413c68921c4b57cd1a3134c3c0db960b8876a91456b6159687a5f5d9504e"
+            "7e6f60f2a98ad4b5babc67043fbcb35fb17576a914be402c8c3ba4908db6a8b9a3a347a18620fb717f6888ac"
+        )
+        raw_tx = (
+            "02000000000101298fed9754d420a2c97ebb0b9dae0786b3d4df3c5aa4eac7ef8ff5f8d81aa2b80100000017160014ce93b1186648"
+            "d2039c794a09631f5a76c6c079e3feffffff0200e1f5050000000017a9144cf32d0858a4cc39b8291416e522960acefc924f87bd3f"
+            "1a110000000017a914f0ca045d824af519d5131a751aad0cefe82f59728702473044022059fb209313db688a1ba6dd105fb66612da"
+            "e25035b3b53b26319a1b067b4b1c1f02207aa21db14667986109537b25f58c51e782cfa517cb6b81e47c01f2aec54ef7c0012103da"
+            "e03d26d68540d94ea4b067a525b929653cdaa863ad21247e5afe719b48510700000000"
+        )
+        initiate_right_requests = self.make_initiate_requests(i_token, selected_swap, contract, raw_tx)
 
         self.initiate_swap(initiate_right_requests)
 
@@ -183,6 +196,8 @@ class TestAPI(unittest.TestCase):
         right_response = {
             "status": ResponseStatus.SUCCESS.value,
             "initiatorAddress": initiate_right_requests["receiveAddress"],
+            "initiateContract": contract,
+            "initiateRawTransaction": raw_tx,
             "tokenHash": sha256d(i_raw_token).hex()
         }
 
