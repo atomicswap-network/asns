@@ -21,7 +21,7 @@ from typing import Dict, Union, List
 
 from .db import SwapStatus, TokenStatus, TokenDBData, TxDBData, DBCommons
 from .tx import BitcoinTx
-from .util import sha256d
+from .util import sha256d, ErrorMessages, ResponseStatus
 
 
 async def api_spawn(app, **kwargs) -> None:
@@ -111,7 +111,7 @@ class RedeemSwapItem(TokenAndTxItem, TokenAndSelectedSwapItem):
 async def http_exception_handler(_: Request, exc: StarletteHTTPException):
     return JSONResponse(
         status_code=exc.status_code,
-        content=jsonable_encoder({"status": "Failed", "error": str(exc.detail)})
+        content=jsonable_encoder({"status": ResponseStatus.FAILED, "error": str(exc.detail)})
     )
 
 
@@ -139,7 +139,7 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError):
         result.append(err)
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
-        content=jsonable_encoder({"status": "Failed", "error": result}),
+        content=jsonable_encoder({"status": ResponseStatus.FAILED, "error": result}),
     )
 
 
@@ -160,7 +160,7 @@ async def get_token(commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     hashed_token = sha256d(raw_token)
     created_at = int(time.time())
     result = {
-        "status": "Success",
+        "status": ResponseStatus.SUCCESS,
         "token": token
     }
 
@@ -169,7 +169,7 @@ async def get_token(commons: DBCommons = Depends(db_commons)) -> JSONResponse:
     except Exception as e:
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         result = {
-            "status": "Failed",
+            "status": ResponseStatus.FAILED,
             "token": None,
             "error": str(e)
         }
@@ -186,7 +186,7 @@ async def verify_token(item: TokenItem, commons: DBCommons = Depends(db_commons)
         exist, create_at = False, None
 
     result = {
-        "status": "Success",
+        "status": ResponseStatus.SUCCESS,
         "exist": exist,
         "create_at": create_at
     }
@@ -203,7 +203,7 @@ async def register_swap(item: RegisterSwapItem, commons: DBCommons = Depends(db_
 
     if msg:
         result = {
-            "status": "Failed",
+            "status": ResponseStatus.FAILED,
             "error": msg
         }
     else:
@@ -243,14 +243,14 @@ async def get_swap_list(commons: DBCommons = Depends(db_commons)) -> JSONRespons
     try:
         all_list = commons.tx_db.get_all()
         result = {
-            "status": "Success",
+            "status": ResponseStatus.SUCCESS,
             "data": {}
         }
     except Exception:
         all_list = {}
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         result = {
-            "status": "Failed",
+            "status": ResponseStatus.FAILED,
             "data": {}
         }
     for key in all_list.keys():
@@ -277,7 +277,7 @@ async def initiate_swap(item: InitiateSwapItem, commons: DBCommons = Depends(db_
         token,
         [TokenStatus.NOT_USED],
         SwapStatus.REGISTERED,
-        selected_swap_key
+        selected_swap_key=selected_swap_key
     )
 
     if result is None:
@@ -309,24 +309,26 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends(db_co
     token = item.token
 
     status_code = status.HTTP_200_OK
-    msg = commons.token_status_msg(token, [TokenStatus.INITIATOR, TokenStatus.PARTICIPATOR])
+    msg = commons.token_status_msg(token, [TokenStatus.PARTICIPATOR])
+    if msg == ErrorMessages.TOKEN_USED:
+        msg = None
 
     if msg:
         result = {
-            "status": "Failed",
+            "status": ResponseStatus.FAILED,
             "error": msg
         }
     else:
         raw_token = b58.a2b_base58(token)
         hashed_token = sha256d(raw_token)
 
-        if SwapStatus.REGISTERED < (swap_data := commons.tx_db.get(hashed_token)).swap_status < SwapStatus.COMPLETED:
+        if SwapStatus.INITIATED <= (swap_data := commons.tx_db.get(hashed_token)).swap_status < SwapStatus.COMPLETED:
             initiator_address = swap_data.i_addr
             initiate_contract = swap_data.i_contract
             initiate_tx = swap_data.i_raw_tx
             token_hash = swap_data.i_token_hash
             result = {
-                "status": "Success",
+                "status": ResponseStatus.SUCCESS,
                 "initiatorAddress": initiator_address,
                 "initiateContract": initiate_contract,
                 "initiateRawTransaction": initiate_tx,
@@ -334,12 +336,12 @@ async def get_initiator_info(item: TokenItem, commons: DBCommons = Depends(db_co
             }
         else:
             result = {
-                "status": "Failed",
+                "status": ResponseStatus.FAILED,
                 "initiatorAddress": None,
                 "tokenHash": None,
                 "initiateContract": None,
                 "initiateRawTransaction": None,
-                "error": "Swap has not initiated or has already completed."
+                "error": ErrorMessages.SWAP_STATUS_INVALID
             }
 
     if result.get("error") is not None:
@@ -356,7 +358,8 @@ async def participate_swap(item: TokenAndTxAndContractItem, commons: DBCommons =
     result, hashed_token, swap_data = commons.verify_token_and_get_swap_data(
         token,
         [TokenStatus.PARTICIPATOR],
-        SwapStatus.INITIATED
+        SwapStatus.INITIATED,
+        [ErrorMessages.TOKEN_USED]
     )
 
     if result is None:
@@ -388,25 +391,24 @@ async def get_participator_info(
         token,
         [TokenStatus.INITIATOR],
         SwapStatus.PARTICIPATED,
-        selected_swap_key
+        selected_swap_key=selected_swap_key
     )
 
-    if result is None:
-        if SwapStatus.PARTICIPATED < selected_swap_data.swap_status < SwapStatus.COMPLETED:
-            participate_contract = selected_swap_data.p_contract
-            participate_tx = selected_swap_data.p_raw_tx
-            result = {
-                "status": "Success",
-                "participateContract": participate_contract,
-                "participateRawTransaction": participate_tx
-            }
-        else:
-            result = {
-                "status": "Failed",
-                "participateContract": None,
-                "participateRawTransaction": None,
-                "error": "Swap has not initiated or has already completed."
-            }
+    if result is None and SwapStatus.PARTICIPATED <= selected_swap_data.swap_status < SwapStatus.COMPLETED:
+        participate_contract = selected_swap_data.p_contract
+        participate_tx = selected_swap_data.p_raw_tx
+        result = {
+            "status": ResponseStatus.SUCCESS,
+            "participateContract": participate_contract,
+            "participateRawTransaction": participate_tx
+        }
+    else:
+        result = {
+            "status": ResponseStatus.FAILED,
+            "participateContract": None,
+            "participateRawTransaction": None,
+            "error": ErrorMessages.SWAP_STATUS_INVALID if result is None else result["error"]
+        }
 
     if result.get("error") is not None:
         status_code = status.HTTP_400_BAD_REQUEST
@@ -424,6 +426,7 @@ async def redeem_swap(item: RedeemSwapItem, commons: DBCommons = Depends(db_comm
         token,
         [TokenStatus.INITIATOR],
         SwapStatus.PARTICIPATED,
+        [ErrorMessages.TOKEN_USED],
         selected_swap_key
     )
 
@@ -449,13 +452,14 @@ async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends(db_comm
     result, hashed_token, swap_data = commons.verify_token_and_get_swap_data(
         token,
         [TokenStatus.PARTICIPATOR],
-        SwapStatus.REDEEMED
+        SwapStatus.REDEEMED,
+        [ErrorMessages.TOKEN_USED]
     )
 
+    initiator_token = None
     if result is None:
         redeem_raw_tx: BitcoinTx = BitcoinTx.from_hex(swap_data.i_redeem_raw_tx)
         txs_in: List[BitcoinTx.TxIn] = redeem_raw_tx.txs_in
-        token = None
         for tx_in in txs_in:
             parsed_script: List[str] = ScriptTools.opcode_list(tx_in.script)
             for data in parsed_script:
@@ -463,20 +467,21 @@ async def get_redeem_token(item: TokenItem, commons: DBCommons = Depends(db_comm
                     pushed_data = binascii.a2b_hex(data[1:-1])
                     hashed_data = sha256d(pushed_data)
                     if swap_data.i_token_hash == hashed_data:
-                        token = pushed_data
+                        initiator_token = pushed_data
                         break
                 else:
                     continue
-        if token is None:
-            result = {
-                "status": "Failed",
-                "error": "A fatal error has occurred."
-            }
-        else:
-            result = {
-                "status": "Success",
-                "token": token.hex()
-            }
+    if initiator_token is None:
+        result = {
+            "status": ResponseStatus.FAILED,
+            "token": None,
+            "error": ErrorMessages.FATAL_ERROR if result is None else result["error"]
+        }
+    else:
+        result = {
+            "status": ResponseStatus.SUCCESS,
+            "token": initiator_token.hex()
+        }
 
     if result.get("error") is not None:
         status_code = status.HTTP_400_BAD_REQUEST
@@ -492,7 +497,8 @@ async def complete_swap(item: TokenAndTxItem, commons: DBCommons = Depends(db_co
     result, hashed_token, swap_data = commons.verify_token_and_get_swap_data(
         token,
         [TokenStatus.PARTICIPATOR],
-        SwapStatus.REDEEMED
+        SwapStatus.REDEEMED,
+        [ErrorMessages.TOKEN_USED]
     )
 
     if result is None:

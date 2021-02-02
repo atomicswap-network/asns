@@ -6,6 +6,7 @@ import platform
 import os
 import hashlib
 
+from enum import Enum
 from typing import Union
 
 os_name = platform.system()
@@ -58,3 +59,20 @@ def hash160(x: Union[bytes, str]) -> bytes:
     h160.update(sha256(x))
     out = h160.digest()
     return bytes(out)
+
+
+class ErrorMessages(Enum):
+    TOKEN_INVALID = "Token is not registered or is invalid."
+    TOKEN_STATUS_INVALID = "Inappropriate token status."
+    TOKEN_USED = "Token is already used."
+    UPDATE_TOKEN = "Failed to update token status: "
+    UPDATE_SWAP = "Failed to update swap data: "
+    SWAP_INVALID = "Selected swap is not registered or is invalid."
+    SWAP_PROGRESS = "Selected swap is already in progress or completed."
+    SWAP_STATUS_INVALID = "Inappropriate swap status."
+    FATAL_ERROR = "A fatal error has occurred."
+
+
+class ResponseStatus(Enum):
+    SUCCESS = "Success"
+    FAILED = "Failed"

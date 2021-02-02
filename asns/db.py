@@ -11,7 +11,7 @@ import plyvel
 import pickle
 
 from pycoin.encoding import b58
-from .util import root_path, sha256d
+from .util import root_path, sha256d, ErrorMessages, ResponseStatus
 
 
 class TokenStatus(IntEnum):
@@ -185,7 +185,7 @@ class DBCommons:
         self.tx_db = TxDB(db_base_path)
         self.token_db = TokenDB(db_base_path)
 
-    def token_status_msg(self, token: str, token_status: List[TokenStatus]) -> Optional[str]:
+    def token_status_msg(self, token: str, token_status: List[TokenStatus]) -> Optional[ErrorMessages]:
         is_exist = False
         is_used = False
         equal_status = False
@@ -210,12 +210,12 @@ class DBCommons:
             except Exception:
                 pass
         else:
-            msg = "Token is not registered or is invalid."
+            msg = ErrorMessages.TOKEN_INVALID
 
         if equal_status:
-            msg = "Inappropriate token status."
+            msg = ErrorMessages.TOKEN_STATUS_INVALID
         elif is_used:
-            msg = "Token is already used."
+            msg = ErrorMessages.TOKEN_USED
 
         return msg
 
@@ -234,16 +234,16 @@ class DBCommons:
     def update_swap(self, hashed_token: bytes, swap_data: TxDBData, err: str = None) -> Dict:
         try:
             if err:
-                raise Exception(f"Failed to update token status: {err}")
+                raise Exception(f"{ErrorMessages.UPDATE_TOKEN}{err}")
             self.tx_db.put(hashed_token, swap_data)
             result = {
-                "status": "Success"
+                "status": ResponseStatus.SUCCESS
             }
         except Exception as e:
             if err is None:
-                e = f"Failed to update swap data: {str(e)}"
+                e = f"{ErrorMessages.UPDATE_SWAP}{str(e)}"
             result = {
-                "status": "Failed",
+                "status": ResponseStatus.FAILED,
                 "error": str(e)
             }
         return result
@@ -253,6 +253,7 @@ class DBCommons:
             token: str,
             token_statuses: List[TokenStatus],
             swap_status: SwapStatus,
+            allow_error: List[ErrorMessages] = [],
             selected_swap_key: bytes = None
     ) -> Tuple[Optional[Dict], bytes, Optional[TxDBData]]:
         msg = self.token_status_msg(token, token_statuses)
@@ -262,6 +263,9 @@ class DBCommons:
             raw_token = b58.a2b_base58(token)
             selected_swap_key = sha256d(raw_token)
 
+        if msg in allow_error:
+            msg = None
+
         if msg is None:
             try:
                 selected_swap_data = self.tx_db.get(selected_swap_key)
@@ -269,13 +273,14 @@ class DBCommons:
                 pass
 
         if selected_swap_data is None:
-            msg = "Selected swap is not registered or is invalid."
-
-        if selected_swap_data.swap_status != swap_status:
-            msg = "Selected swap is already in progress or completed."
+            msg = ErrorMessages.SWAP_INVALID
+        elif selected_swap_data.swap_status > swap_status:
+            msg = ErrorMessages.SWAP_PROGRESS
+        elif selected_swap_data.swap_status != swap_status:
+            msg = ErrorMessages.SWAP_STATUS_INVALID
 
         result = {
-            "status": "Failed",
+            "status": ResponseStatus.FAILED,
             "error": msg
         } if msg is not None else None
 
